@@ -76,7 +76,7 @@ every API task edits `orbit/api/app.py`.
 | [x] | [B06](B06-evaluation-runner.md) | Evaluation runner and CLI | Evaluation | B04, B05 | M |
 | [x] | [B07](B07-scorer-features.md) | Feature extraction for the AI scorer | AI | none | S |
 | [x] | [B08](B08-learned-scorer.md) | Learned scorer module (placeholder weights) | AI | B07 | S |
-| [ ] | [B09](B09-train-scorer.md) | Train the scorer on simulated missions | AI | B04, B07, B08 | M |
+| [x] | [B09](B09-train-scorer.md) | Train the scorer on simulated missions | AI | B04, B07, B08 | M |
 | [ ] | [B10](B10-compare-and-switch.md) | Compare learned vs starter, then switch | AI | B06, B08, B09 | S |
 | [ ] | [B11](B11-wearable-import.md) | Wearable CSV import | Data | none | M |
 | [x] | [B13](B13-api-past-day.md) | Past-day endpoint for replay | API | none | S |
