@@ -63,3 +63,20 @@ def test_held_out_seeds_are_refused(tmp_path):
     with pytest.raises(ValueError, match="held out"):
         train([1, 101], days=40, crew=2, out=tmp_path / "w.json", config=CONFIG)
     assert not (tmp_path / "w.json").exists()
+
+
+def test_calibration_options_change_the_points_and_the_version(tmp_path):
+    default, early = tmp_path / "default.json", tmp_path / "early.json"
+    assert main([*TINY, "--out", str(default)]) == 0
+    assert main([*TINY, "--out", str(early), "--yellow-probability", "0.5",
+                 "--class-weight", "balanced"]) == 0
+    doc, early_doc = (json.loads(p.read_text(encoding="utf-8")) for p in (default, early))
+    assert doc["trained_on"]["yellow_probability"] == 0.92
+    assert doc["trained_on"]["class_weight"] is None
+    assert early_doc["version"] == "trained-s2-d40-c2-p50-bal"
+    assert early_doc["trained_on"]["class_weight"] == "balanced"
+    # A lower yellow probability means every finding earns more points.
+    assert sum(early_doc["weights"].values()) > sum(doc["weights"].values())
+    with pytest.raises(ValueError, match="between 0 and 1"):
+        train([2], days=40, crew=2, out=tmp_path / "bad.json", config=CONFIG,
+              yellow_probability=1.0)
