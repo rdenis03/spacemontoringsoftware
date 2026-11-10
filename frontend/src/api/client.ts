@@ -105,6 +105,10 @@ export const api = {
   status: (id: string, signal?: AbortSignal, view?: "shared") =>
     request<DayResult>(`${crewPath(id)}/status`, { signal, query: { view } }),
 
+  /** A past assessment's full result (B13); `asOf` must be an `assessed_at` from /assessments. */
+  day: (id: string, asOf: string, signal?: AbortSignal, view?: "shared") =>
+    request<DayResult>(`${crewPath(id)}/day`, { signal, query: { as_of: asOf, view } }),
+
   /** What would be sent to Earth for a period, after the consent filter (M13). */
   earthPacket: (id: string, start: string, end: string, signal?: AbortSignal) =>
     request<EarthPacket>(`${crewPath(id)}/earth-packet`, { signal, query: { start, end } }),

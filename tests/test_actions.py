@@ -1,5 +1,6 @@
-"""M10 action engine (``protocol``) and the hand-written card library."""
+"""M10 action engine (``protocol``) and the hand-written card library (task B19)."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -7,7 +8,15 @@ from conftest import DAY_89, DAY_90, ROOT
 
 from orbit.core import create
 from orbit.modules.actions import CardLibraryError, ProtocolActionEngine, check_library
-from orbit.schema import ActionCard, AlertLevel, Contributor, EscalationTarget, RiskAssessment, parse_jsonl
+from orbit.schema import (
+    ActionCard,
+    AlertLevel,
+    Contributor,
+    EscalationTarget,
+    RiskAssessment,
+    get_spec,
+    parse_jsonl,
+)
 
 LIBRARY = ROOT / "cards" / "action_cards.jsonl"
 
@@ -45,8 +54,22 @@ def test_library_validates_and_meets_the_rules():
 def test_library_text_is_short_and_has_no_doses():
     for card in parse_jsonl(LIBRARY, ActionCard).raise_if_errors():
         assert all(len(step) < 200 for step in card.steps), card.card_id
+        assert not any(re.search(r"\d\s*mg", step, re.IGNORECASE) for step in card.steps), card.card_id
         text = " ".join((card.title, card.rationale, *card.steps)).lower()
-        assert not any(unit in text for unit in (" mg", "mg ", " ml ", "tablet", "dose")), card.card_id
+        assert not any(word in text for word in ("tablet", "dose", "pill")), card.card_id
+
+
+def test_each_card_triggers_one_category():
+    # B15's shared view hides a card with any private trigger; one category per card
+    # keeps the harmless lab and vital cards visible to the crew.
+    for card in parse_jsonl(LIBRARY, ActionCard).raise_if_errors():
+        assert len({get_spec(s).category for s in card.triggers}) <= 1, card.card_id
+
+
+def test_virus_specific_cards_exist():
+    triggers = {s for card in parse_jsonl(LIBRARY, ActionCard).raise_if_errors() for s in card.triggers}
+    assert {"saliva_vzv_dna", "saliva_hsv1_dna", "saliva_ebv_dna", "symptom_rash_tingling",
+            "symptom_mouth_sores", "symptom_swollen_glands", "symptom_fever_chills", "crp"} <= triggers
 
 
 def test_config_points_at_the_library(settings):
@@ -61,6 +84,17 @@ def test_config_points_at_the_library(settings):
         (
             [ActionCard(card_id="g", level="green", title="t", steps=("s",), rationale="r")],
             "no general card",
+        ),
+        (
+            [
+                ActionCard(card_id=lvl, level=lvl, title="t", steps=("s",), rationale="r",
+                           escalate_to="crew_medical_officer" if lvl in ("orange", "red") else "self")
+                for lvl in ("green", "yellow", "orange", "red")
+            ]
+            + [ActionCard(card_id="mixed", level="orange", title="t", steps=("s",), rationale="r",
+                          escalate_to="crew_medical_officer",
+                          triggers=("saliva_vzv_dna", "symptom_rash_tingling"))],
+            "triggers mix categories",
         ),
         (
             [
@@ -100,14 +134,14 @@ def test_card_explaining_most_of_the_score_comes_first(engine, ctx):
 
 def test_general_card_follows_specific_ones(engine, ctx):
     cards = engine.recommend(assessment(60, ("symptom_rash_tingling", 20)), ctx)
-    assert [c.card_id for c in cards] == ["reduce-load", "tell-cmo"]
+    assert [c.card_id for c in cards] == ["protect-rash", "tell-cmo"]
 
 
 def test_red_day_without_red_specific_card_keeps_the_specific_steps(engine, ctx):
     # No red card fits a rash and fever, so the general red card leads and
     # the most relevant orange cards follow, still never above red.
     cards = engine.recommend(assessment(90, ("symptom_rash_tingling", 20), ("symptom_fever_chills", 10)), ctx)
-    assert [c.card_id for c in cards] == ["isolate-consult", "reduce-load", "limit-spread"]
+    assert [c.card_id for c in cards] == ["isolate-consult", "protect-rash", "limit-spread"]
 
 
 def test_red_specific_card_comes_first_when_it_fits(engine, ctx):
@@ -157,6 +191,6 @@ def test_demo_days_get_fitting_cards(loaded_pipeline):
 
     day_90 = loaded_pipeline.assess("AST-01", DAY_90, save=False)
     ids = [c.card_id for c in day_90.actions]
-    assert ids[0] == "reduce-load"  # VZV and rash explain most of the score
-    assert "tell-cmo" in ids
+    assert ids == ["reduce-load", "protect-rash", "tell-cmo"]
+    assert "saliva_vzv_dna" in day_90.actions[0].triggers  # the VZV-specific card comes first
     assert all(c.escalate_to is EscalationTarget.CREW_MEDICAL_OFFICER for c in day_90.actions)

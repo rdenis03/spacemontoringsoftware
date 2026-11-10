@@ -86,23 +86,23 @@ class StoreError(RuntimeError):
 
 
 class OutboxEntry(BaseModel):
-    """One packet queued for Earth (M13): what was sent, when, and when it arrives.
+    """One packet queued for Earth (M13, task B16): what was sent, when, when it arrives.
 
     The packet has already passed the consent gate. Delivery is simulated: a
-    packet counts as delivered once the current time reaches ``deliver_at``.
-    The outbox doubles as the audit log of everything that left the spacecraft.
+    packet counts as delivered once the real current time reaches
+    ``deliver_at``. The outbox doubles as the audit log of everything that
+    left the spacecraft. ``summary`` is filled by B17, ``auto`` set by B18.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    packet_id: str
+    id: str
     astronaut_id: str
     created_at: datetime
     deliver_at: datetime
-    delay_minutes: float = Field(ge=0)
-    start: datetime = Field(description="Start of the period the packet covers.")
-    end: datetime = Field(description="End of the period the packet covers.")
     packet: EarthPacket
+    summary: str = Field(default="", description="Plain-language report for Earth (B17).")
+    auto: bool = Field(default=False, description="Queued by ORBIT itself on orange/red (B18).")
 
 
 class Store:
@@ -350,12 +350,12 @@ class Store:
 
     # ---- outbox (M13) -------------------------------------------------------
 
-    def queue_packet(self, entry: OutboxEntry) -> None:
-        """Add a packet to the outbox. Re-queuing the same ``packet_id`` replaces it."""
+    def queue(self, entry: OutboxEntry) -> None:
+        """Add a packet to the outbox. Re-queuing the same ``id`` replaces it."""
         with self._tx() as db:
             db.execute(
                 "INSERT OR REPLACE INTO outbox VALUES (?, ?, ?, ?, ?)",
-                (entry.packet_id, entry.astronaut_id, _ts(entry.created_at),
+                (entry.id, entry.astronaut_id, _ts(entry.created_at),
                  _ts(entry.deliver_at), entry.model_dump_json()),
             )
 

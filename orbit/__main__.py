@@ -142,7 +142,7 @@ def cmd_serve(settings: Settings, args: argparse.Namespace) -> int:
         _ingest_sources(pipeline, settings)
         print(pipeline.run().summary())
     app = create_app(pipeline, mission_name=settings.mission_name,
-                     one_way_delay_minutes=settings.one_way_delay_minutes)
+                     comms_delay_minutes=settings.comms_delay_minutes)
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
     return 0
 

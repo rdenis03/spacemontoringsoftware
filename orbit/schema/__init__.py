@@ -34,6 +34,7 @@ from .io import (
     write_csv,
     write_jsonl,
 )
+from .labels import ALERTING_SCENARIOS, ScenarioLabel, ScenarioType, read_labels, write_labels
 from .models import (
     DEFAULT_SHARED_CATEGORIES,
     LEVEL_THRESHOLDS,
@@ -64,4 +65,6 @@ __all__ = [
     "OBSERVATION_COLUMNS", "ParseResult", "RowError", "SchemaError",
     "parse_records", "parse_jsonl", "parse_csv", "write_jsonl", "write_csv",
     "to_dataframe", "from_dataframe",
+    # scenario labels
+    "ScenarioType", "ScenarioLabel", "ALERTING_SCENARIOS", "read_labels", "write_labels",
 ]

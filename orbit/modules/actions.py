@@ -25,7 +25,7 @@ from collections import defaultdict
 
 from orbit.core.interfaces import AssessmentContext
 from orbit.core.registry import register
-from orbit.schema import ActionCard, AlertLevel, EscalationTarget, RiskAssessment, parse_jsonl
+from orbit.schema import ActionCard, AlertLevel, EscalationTarget, RiskAssessment, get_spec, parse_jsonl
 
 BUILT_IN_CARDS = (
     ActionCard(card_id="keep-routine", level=AlertLevel.GREEN, title="Keep your routine",
@@ -84,6 +84,10 @@ def check_library(cards: tuple[ActionCard, ...]) -> None:
     * Orange and red cards name who else must know (``escalate_to`` is not
       ``self``).
     * Card ids are unique.
+    * Each card's triggers stay within one signal category (task B19). The
+      shared crew view (B15) hides a card whose triggers touch a private
+      category, so a card mixing a lab result with a symptom would vanish
+      whenever symptoms are private, which is the default.
     """
     problems: list[str] = []
     ids = [card.card_id for card in cards]
@@ -96,6 +100,9 @@ def check_library(cards: tuple[ActionCard, ...]) -> None:
     for card in cards:
         if card.level.rank >= AlertLevel.ORANGE.rank and card.escalate_to is EscalationTarget.SELF:
             problems.append(f"{card.card_id}: {card.level.value} cards must set escalate_to")
+        categories = sorted({get_spec(signal).category.value for signal in card.triggers})
+        if len(categories) > 1:
+            problems.append(f"{card.card_id}: triggers mix categories ({', '.join(categories)})")
     if problems:
         raise CardLibraryError("action card library: " + "; ".join(problems))
 

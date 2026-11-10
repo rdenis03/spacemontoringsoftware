@@ -18,3 +18,4 @@ To add a module: create a file here, decorate the class with
 """
 
 from . import actions, baseline, consent, detector, scorer, sources  # noqa: F401
+from . import simulator  # noqa: F401

@@ -324,3 +324,18 @@
   font-size: 12px;
   color: var(--color-neutral-700);
 }
+
+.outbox__auto {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+.outbox__summary {
+  padding-top: 8px;
+  border-top: 1px solid var(--color-divider);
+  font-size: 13px;
+  color: var(--color-neutral-800);
+  text-wrap: pretty;
+}

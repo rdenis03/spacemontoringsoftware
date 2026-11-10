@@ -55,6 +55,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/crew/{astronaut_id}/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Consent
+         * @description Change which kinds of data may leave the spacecraft.
+         *
+         *     Readings of other categories stay onboard. Score and level are always
+         *     sent (the consent gate's rule), so a hidden emergency is impossible.
+         */
+        put: operations["consent_api_crew__astronaut_id__consent_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/overview": {
         parameters: {
             query?: never;
@@ -79,13 +102,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Status
-         * @description Latest result. ``view=shared`` is what crewmates see (M14): the assessment goes
-         *     through the consent gate, so reasons from private categories show a neutral
-         *     label, and anomalies and baselines of private signals are left out.
-         */
+        /** Status */
         get: operations["status_api_crew__astronaut_id__status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/crew/{astronaut_id}/day": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Day
+         * @description The full saved result of one past assessment, for the mission replay slider.
+         */
+        get: operations["day_api_crew__astronaut_id__day_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -179,26 +217,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/crew/{astronaut_id}/consent": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Consent
-         * @description Change what leaves the spacecraft. Applies to packets built from now on.
-         */
-        put: operations["consent_api_crew__astronaut_id__consent_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/crew/{astronaut_id}/earth-packet/send": {
         parameters: {
             query?: never;
@@ -210,7 +228,7 @@ export interface paths {
         put?: never;
         /**
          * Send Earth Packet
-         * @description Package the period through the consent gate and queue it for Earth.
+         * @description Package the period through the consent gate and queue it for Earth (B16).
          */
         post: operations["send_earth_packet_api_crew__astronaut_id__earth_packet_send_post"];
         delete?: never;
@@ -228,7 +246,7 @@ export interface paths {
         };
         /**
          * Outbox
-         * @description Everything sent to Earth, newest first, with its delivery status now.
+         * @description Everything sent to Earth, newest first, with ``status`` and ``seconds_left`` now.
          */
         get: operations["outbox_api_outbox_get"];
         put?: never;
@@ -437,17 +455,14 @@ export interface components {
         };
         /**
          * ConsentUpdate
-         * @description The categories the astronaut shares with Earth. Anything else stays onboard.
+         * @description The categories the astronaut shares with Earth. An empty list shares nothing.
          */
         ConsentUpdate: {
             /**
              * Share With Earth
-             * @description Categories sent to Earth; symptoms and wellbeing are private unless listed.
              * @example [
              *       "vital",
-             *       "sleep",
-             *       "lab",
-             *       "context"
+             *       "sleep"
              *     ]
              */
             share_with_earth: components["schemas"]["SignalCategory"][];
@@ -681,11 +696,11 @@ export interface components {
         };
         /**
          * OutboxItem
-         * @description A queued packet as the frontend sees it: the entry plus its live delivery status.
+         * @description An outbox entry with its delivery status right now (B16).
          */
         OutboxItem: {
-            /** Packet Id */
-            packet_id: string;
+            /** Id */
+            id: string;
             /** Astronaut Id */
             astronaut_id: string;
             /**
@@ -698,28 +713,27 @@ export interface components {
              * Format: date-time
              */
             deliver_at: string;
-            /** Delay Minutes */
-            delay_minutes: number;
+            packet: components["schemas"]["EarthPacket"];
             /**
-             * Start
-             * Format: date-time
+             * Summary
+             * @default
              */
-            start: string;
+            summary: string;
             /**
-             * End
-             * Format: date-time
+             * Auto
+             * @default false
              */
-            end: string;
+            auto: boolean;
             /**
              * Status
              * @enum {string}
              */
             status: "queued" | "delivered";
             /**
-             * Seconds To Delivery
-             * @description 0 once delivered.
+             * Seconds Left
+             * @description Seconds until delivery; 0 once delivered.
              */
-            seconds_to_delivery: number;
+            seconds_left: number;
             /**
              * Sent
              * @description Readings sent, per category.
@@ -734,7 +748,6 @@ export interface components {
             withheld: {
                 [key: string]: number;
             };
-            packet: components["schemas"]["EarthPacket"];
         };
         /** OverviewRow */
         OverviewRow: {
@@ -915,6 +928,41 @@ export interface operations {
             };
         };
     };
+    consent_api_crew__astronaut_id__consent_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                astronaut_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrewMember"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     overview_api_overview_get: {
         parameters: {
             query?: never;
@@ -938,6 +986,41 @@ export interface operations {
     status_api_crew__astronaut_id__status_get: {
         parameters: {
             query?: {
+                view?: "full" | "shared";
+            };
+            header?: never;
+            path: {
+                astronaut_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    day_api_crew__astronaut_id__day_get: {
+        parameters: {
+            query: {
+                /** @description An `assessed_at` value from /assessments. No timezone means UTC. */
+                as_of: string;
                 view?: "full" | "shared";
             };
             header?: never;
@@ -1142,47 +1225,12 @@ export interface operations {
             };
         };
     };
-    consent_api_crew__astronaut_id__consent_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                astronaut_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ConsentUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrewMember"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     send_earth_packet_api_crew__astronaut_id__earth_packet_send_post: {
         parameters: {
             query: {
                 start: string;
                 end: string;
-                /** @description One-way delay for this packet; default from [comms] in orbit.toml. */
+                /** @description One-way delay for this packet: Moon about 0.02, Mars 4-24. Default: [comms] one_way_delay_minutes in orbit.toml. */
                 delay_minutes?: number | null;
             };
             header?: never;

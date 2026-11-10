@@ -362,7 +362,7 @@ function SendPanel({
         ) : (
           <ul className="outbox__list">
             {outbox.data.map((item) => (
-              <OutboxRow key={item.packet_id} item={item} />
+              <OutboxRow key={item.id} item={item} />
             ))}
           </ul>
         )}
@@ -411,9 +411,12 @@ function OutboxRow({ item }: { item: OutboxItem }) {
           </>
         )}
         <span className="data">
-          {sent} readings sent · {kept} kept onboard · {formatDelay(item.delay_minutes)} delay
+          {sent} readings sent · {kept} kept onboard · {formatDelay((deliverAt - createdAt) / 60_000)} delay
         </span>
+        {item.auto && <span className="outbox__auto">Sent by ORBIT</span>}
       </p>
+      {/* Plain-language report for the flight surgeon (filled once B17 lands). */}
+      {item.summary && <p className="outbox__summary">{item.summary}</p>}
     </Frame>
   );
 }

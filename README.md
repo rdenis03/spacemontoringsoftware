@@ -71,7 +71,8 @@ python -m orbit.schema validate my.jsonl # check a data file against the schema
 | GET | `/api/signals` | labels, units, scales, alert thresholds |
 | GET | `/api/crew` | crew list |
 | GET | `/api/overview` | crew view (M14): latest level per astronaut |
-| GET | `/api/crew/{id}/status` | dashboard (M12): level, reasons, actions, anomalies; `?view=shared` hides private reasons (crew view, M14) |
+| GET | `/api/crew/{id}/status` | dashboard (M12): level, reasons, actions, anomalies; `?view=shared` hides private reasons and cards (crew view, M14) |
+| GET | `/api/crew/{id}/day?as_of=` | the same for a past assessment (replay); also `?view=shared` |
 | GET | `/api/crew/{id}/observations?signal=&start=&end=` | charts |
 | GET | `/api/crew/{id}/baselines?signal=` | "your normal" band |
 | GET | `/api/crew/{id}/assessments` | score trend line |

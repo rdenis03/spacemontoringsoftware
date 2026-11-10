@@ -285,8 +285,33 @@ function HistoryView({
               ))}
             </ol>
           )}
+          <ReplayCards astronautId={astronautId} asOf={current.assessed_at} />
         </Frame>
       </div>
+    </div>
+  );
+}
+
+/** The action cards ORBIT gave on the replayed day (GET /day, B13). */
+function ReplayCards({ astronautId, asOf }: { astronautId: string; asOf: string }) {
+  const day = useAsync((signal) => api.day(astronautId, asOf, signal), [astronautId, asOf]);
+  const cards = day.data?.actions ?? [];
+  if (day.error || (day.data && cards.length === 0)) return null;
+  return (
+    <div className="replay__cards">
+      <span className="kicker">Action cards that day</span>
+      {!day.data ? (
+        <p className="secondary">Loading…</p>
+      ) : (
+        <ul>
+          {cards.map((card) => (
+            <li key={card.card_id}>
+              <span>{card.title}</span>
+              <LevelTag level={card.level} />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

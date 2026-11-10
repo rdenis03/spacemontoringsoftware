@@ -51,8 +51,8 @@ class Settings:
     baseline_window_days: int = 14
     recent_days: int = 3
     event_lookback_days: int = 7
-    #: [comms] one-way delay to Earth for queued packets (M13); Mars is 3-22 min.
-    one_way_delay_minutes: float = 20.0
+    #: [comms] one_way_delay_minutes: delay to Earth for queued packets (M13, B16).
+    comms_delay_minutes: float = 20.0
     modules: dict[str, ModuleChoice] = field(
         default_factory=lambda: {slot: ModuleChoice(name) for slot, name in DEFAULT_MODULES.items()}
     )
@@ -134,7 +134,7 @@ def load_settings(path: str | Path | None = None) -> Settings:
         baseline_window_days=int(pipeline.get("baseline_window_days", 14)),
         recent_days=int(pipeline.get("recent_days", 3)),
         event_lookback_days=int(pipeline.get("event_lookback_days", 7)),
-        one_way_delay_minutes=float(comms.get("one_way_delay_minutes", 20.0)),
+        comms_delay_minutes=float(comms.get("one_way_delay_minutes", 20.0)),
         modules=modules,
         sources=sources,
         config_path=config_path.resolve(),
@@ -142,7 +142,7 @@ def load_settings(path: str | Path | None = None) -> Settings:
     for name in ("baseline_window_days", "recent_days", "event_lookback_days"):
         if getattr(settings, name) < 1:
             raise ConfigError(f"pipeline.{name} must be at least 1")
-    if not 0 <= settings.one_way_delay_minutes <= 24 * 60:
+    if not 0 <= settings.comms_delay_minutes <= 24 * 60:
         raise ConfigError("comms.one_way_delay_minutes must be between 0 and 1440")
     assert set(SLOTS) >= set(settings.modules)
     return settings
