@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { api } from "../../api/client";
 import type { Observation, RiskAssessment } from "../../api/types";
+import { LevelDot } from "../../components/LevelShape";
 import { LevelTag } from "../../components/LevelTag";
 import { LoadError, Loading } from "../../components/StateMessage";
 import { dayTickLabel, dayTicks, ms } from "../../lib/chart";
@@ -19,7 +20,7 @@ import { formatMissionTime, formatNumber, missionDay } from "../../lib/format";
 import { levelBands, levelCopy, levelRank } from "../../lib/levels";
 import { useAsync } from "../../lib/useAsync";
 import { useTokens } from "../../lib/useTokens";
-import { useRegistry } from "../../state/registry";
+import { useRegistry } from "../../state/registry-context";
 
 interface Props {
   astronautId: string;
@@ -226,29 +227,6 @@ function HistoryView({
       </section>
     </div>
   );
-}
-
-/** Level-shaped dot so the level reads without colour (same shapes as LevelIcon). */
-function LevelDot({ cx, cy, color, level, stroke }: { cx?: number; cy?: number; color?: string; level?: string; stroke: string }) {
-  if (cx === undefined || cy === undefined) return null;
-  const r = 6;
-  let d: string;
-  switch (level) {
-    case "yellow":
-      d = `M${cx} ${cy - r} L${cx + r} ${cy} L${cx} ${cy + r} L${cx - r} ${cy}Z`;
-      break;
-    case "orange":
-      d = `M${cx} ${cy - r} L${cx + r} ${cy + r * 0.8} L${cx - r} ${cy + r * 0.8}Z`;
-      break;
-    case "red": {
-      const a = r * 0.42;
-      d = `M${cx - a} ${cy - r} L${cx + a} ${cy - r} L${cx + r} ${cy - a} L${cx + r} ${cy + a} L${cx + a} ${cy + r} L${cx - a} ${cy + r} L${cx - r} ${cy + a} L${cx - r} ${cy - a}Z`;
-      break;
-    }
-    default:
-      return <circle cx={cx} cy={cy} r={r - 1} fill={color} stroke={stroke} strokeWidth={1.5} />;
-  }
-  return <path d={d} fill={color} stroke={stroke} strokeWidth={1.5} />;
 }
 
 /**

@@ -18,6 +18,13 @@ export function LevelIcon({ level, size = 20 }: { level: string; size?: number }
     case "red":
       shape = <path d="M8 2h8l6 6v8l-6 6H8l-6-6V8Z" />;
       break;
+    case "none":
+      // No personal normal yet: hollow circle in the secondary colour.
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" style={{ flexShrink: 0 }} aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="9" style={{ fill: "none", stroke: "var(--secondary)", strokeWidth: 2.5 }} />
+        </svg>
+      );
     default:
       shape = <circle cx="12" cy="12" r="10" />;
   }

@@ -5,8 +5,6 @@ export interface AsyncState<T> {
   error: unknown;
   /** True only while there is nothing to show yet. */
   loading: boolean;
-  /** True during any request, including background refreshes. */
-  refreshing: boolean;
   reload: () => void;
 }
 
@@ -17,48 +15,47 @@ interface Options {
   enabled?: boolean;
 }
 
+interface Stored<T> {
+  key: string;
+  data: T | undefined;
+  error: unknown;
+}
+
 /**
  * Loads data and keeps it fresh. Earlier data stays on screen while a
- * refresh runs, so polling never makes the page flash.
+ * refresh runs, so polling never makes the page flash. When the inputs
+ * change (another astronaut, another signal), old data is hidden at once.
+ *
+ * `deps` must be serialisable values (ids, names, timestamps).
  */
 export function useAsync<T>(
   load: (signal: AbortSignal) => Promise<T>,
   deps: readonly unknown[],
   { pollMs, enabled = true }: Options = {},
 ): AsyncState<T> {
-  const [data, setData] = useState<T>();
-  const [error, setError] = useState<unknown>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const key = JSON.stringify(deps);
+  const [stored, setStored] = useState<Stored<T>>({ key, data: undefined, error: null });
   const [tick, setTick] = useState(0);
   const loadRef = useRef(load);
-  loadRef.current = load;
+
+  useEffect(() => {
+    loadRef.current = load;
+  });
 
   const reload = useCallback(() => setTick((n) => n + 1), []);
-
-  // New inputs (another astronaut, another signal): drop the old data.
-  useEffect(() => {
-    setData(undefined);
-    setError(null);
-  }, deps);
 
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
-    setRefreshing(true);
-    loadRef
-      .current(controller.signal)
-      .then((result) => {
-        setData(result);
-        setError(null);
-      })
-      .catch((err: unknown) => {
-        if (!controller.signal.aborted) setError(err);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setRefreshing(false);
-      });
+    loadRef.current(controller.signal).then(
+      (data) => setStored({ key, data, error: null }),
+      (error: unknown) => {
+        if (controller.signal.aborted) return;
+        setStored((prev) => ({ key, data: prev.key === key ? prev.data : undefined, error }));
+      },
+    );
     return () => controller.abort();
-  }, [...deps, tick, enabled]);
+  }, [key, tick, enabled]);
 
   useEffect(() => {
     if (!pollMs || !enabled) return;
@@ -73,5 +70,11 @@ export function useAsync<T>(
     };
   }, [pollMs, enabled, reload]);
 
-  return { data, error, loading: data === undefined && error === null && enabled, refreshing, reload };
+  const current = stored.key === key ? stored : { data: undefined, error: null };
+  return {
+    data: current.data,
+    error: current.error,
+    loading: enabled && current.data === undefined && current.error === null,
+    reload,
+  };
 }

@@ -10,7 +10,7 @@ import { api } from "../../api/client";
 import { SegmentedTabs } from "../../components/SegmentedTabs";
 import { formatMissionTime } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
-import { useRegistry } from "../../state/registry";
+import { useRegistry } from "../../state/registry-context";
 import History from "./History";
 import Today from "./Today";
 import Trends from "./Trends";

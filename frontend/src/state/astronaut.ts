@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router-dom";
-import { useRegistry } from "./registry";
+import { useRegistry } from "./registry-context";
 
 /**
  * The astronaut being viewed lives in the URL (`?astronaut=AST-01`), so a

@@ -4,7 +4,8 @@ import { LoadError, Loading } from "./components/StateMessage";
 import { useAsync } from "./lib/useAsync";
 import DashboardPage from "./routes/dashboard/DashboardPage";
 import { useAstronaut } from "./state/astronaut";
-import { RegistryProvider, useRegistry } from "./state/registry";
+import { RegistryProvider } from "./state/registry";
+import { useRegistry } from "./state/registry-context";
 import "./App.css";
 
 export default function App() {

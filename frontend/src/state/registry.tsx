@@ -1,16 +1,8 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
-import type { CrewMember, SignalRegistry, SignalSpec } from "../api/types";
+import { useMemo, type ReactNode } from "react";
+import type { CrewMember, SignalRegistry } from "../api/types";
+import { RegistryContext, type RegistryValue } from "./registry-context";
 
-interface RegistryValue {
-  registry: SignalRegistry;
-  crew: CrewMember[];
-  spec: (signal: string | null | undefined) => SignalSpec | undefined;
-  member: (astronautId: string) => CrewMember | undefined;
-}
-
-const RegistryContext = createContext<RegistryValue | null>(null);
-
-/** Signal registry and crew list, loaded once at start and shared by every screen. */
+/** Provides the signal registry and crew list, loaded once at start. */
 export function RegistryProvider({
   registry,
   crew,
@@ -31,10 +23,4 @@ export function RegistryProvider({
     };
   }, [registry, crew]);
   return <RegistryContext.Provider value={value}>{children}</RegistryContext.Provider>;
-}
-
-export function useRegistry(): RegistryValue {
-  const value = useContext(RegistryContext);
-  if (!value) throw new Error("useRegistry must be used inside RegistryProvider");
-  return value;
 }

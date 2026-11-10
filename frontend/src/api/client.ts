@@ -69,8 +69,9 @@ export const api = {
 
   status: (id: string, signal?: AbortSignal) => request<DayResult>(`${crewPath(id)}/status`, { signal }),
 
-  observations: (id: string, signals: string[], signal?: AbortSignal) =>
-    request<Observation[]>(`${crewPath(id)}/observations`, { signal, query: { signal: signals } }),
+  /** Readings; an empty `signals` list means every signal. */
+  observations: (id: string, signals: string[], signal?: AbortSignal, start?: string) =>
+    request<Observation[]>(`${crewPath(id)}/observations`, { signal, query: { signal: signals, start } }),
 
   baselines: (id: string, signalName: string, signal?: AbortSignal) =>
     request<Baseline[]>(`${crewPath(id)}/baselines`, { signal, query: { signal: signalName } }),

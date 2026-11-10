@@ -7,7 +7,7 @@ import { LoadError, Loading, PartialNote } from "../../components/StateMessage";
 import { formatMissionTime, formatNumber, humanize, signedNumber, withUnit } from "../../lib/format";
 import { levelColor, levelCopy, levelForScore } from "../../lib/levels";
 import type { AsyncState } from "../../lib/useAsync";
-import { useRegistry } from "../../state/registry";
+import { useRegistry } from "../../state/registry-context";
 
 export default function Today({ status }: { status: AsyncState<DayResult> }) {
   if (status.error) return <LoadError error={status.error} retry={status.reload} what="assessment" />;
