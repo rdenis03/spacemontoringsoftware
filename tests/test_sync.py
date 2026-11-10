@@ -74,7 +74,8 @@ def test_default_delay_queues_then_delivers(client, clock):
     assert item["status"] == "queued"
     assert item["seconds_left"] == pytest.approx(1200)
     assert datetime.fromisoformat(item["deliver_at"]) - datetime.fromisoformat(item["created_at"]) == timedelta(minutes=20)
-    assert item["summary"] == "" and item["auto"] is False  # filled by B17 / set by B18
+    assert item["summary"].startswith("AST-01 Vega")  # B17's report (tests/test_earth_report.py)
+    assert item["auto"] is False  # set by B18
 
     clock.now = T0 + timedelta(minutes=19)
     assert client.get("/api/outbox").json()[0]["status"] == "queued"

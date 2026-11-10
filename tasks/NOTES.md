@@ -181,3 +181,18 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - `tests/test_scorer_learned.py` (B08) was updated with the team's agreement: it checks the weights format, not placeholder values, and pins yellow then orange for the learned config.
 - B10, first look on seeds 101-105 (180 d x 4 crew): learned sensitivity 1.00, lead 0.4 day, 0 false alarms, confounder alert rate 0.15; rule_based 1.00, 0.1 day, 0, 0.14.
 - B20: the stage script relies on rule_based points; with the learned weights HR +30 and temp +0.7 score differently, so recheck it if B10 switches the scorer.
+
+## B17 · Plain-language report for Earth
+
+- `from orbit.api.earth_report import build_report, MAX_LENGTH`; `build_report(member, packet, actions=()) -> str`. Pure: no clock, no I/O; one line, at most 600 characters, sections joined by " · ".
+- The send endpoint sets `summary = build_report(member, packet, store.recommendations(latest.assessment_id))`, with `latest` = the newest assessment in the packet. `GET /api/outbox` shows it.
+- B18: build the auto packet's `summary` the same way, and set `auto=True`.
+- Shape: `AST-01 Vega · ORANGE (70) · mission day 90 · <reasons> · Actions: <cards> · Withheld by the astronaut: symptom (64), wellbeing (16)`. The score is a whole number.
+- Reasons: not a strict top 3. First the strongest shared reason of each category (events count as one), then the next strongest, up to 3, shown by points. With strict top 3 the report was three vital signs and the rash never showed, even when shared.
+- Every private reason in the assessment is counted ("2 private reasons"), not only those in the top 3. Private = label equals `PRIVATE_LABEL` from `orbit/modules/consent.py`; another sync module must use the same label.
+- "your normal" becomes "normal" and "in your check-in" becomes "in the check-in": the reader is the flight surgeon.
+- Actions: a card is named, with `escalate_to` in brackets unless it is `self`, only when all its `triggers` are in shared categories; otherwise it counts as "1 private action". They are the advised cards; the report does not say they were done.
+- Empty cases: "No assessment in this period", "No findings", "Actions: none", "Nothing withheld by the astronaut".
+- Too long: actions are counted instead of listed ("3 actions"), then reasons are cut to 60 characters, then the line is cut with "…".
+- AST-01 day 90, default sharing: 398 characters; no "rash" or "fatigue". After sharing `symptom`: "Rash or tingling: mild in the check-in" and the card "Look after the rash".
+- `tests/test_sync.py` (B16) changed by one line, with the team's agreement: it expected `summary == ""` until B17.
