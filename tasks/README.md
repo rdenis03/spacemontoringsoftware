@@ -12,7 +12,27 @@ for one AI agent (or one person): one branch, one pull request, one test file.
 - **Branches:** one per task, with A's prefix: `data/b01-scenario-labels`,
   `data/b02-simulator-healthy`, ... Each task file names its branch.
 
-## How to run a task with an agent
+## Fastest way: two commands
+
+In Claude Code (the VS Code panel or the terminal), one task is two commands:
+
+1. **`/task B02`**: checks that nothing is uncommitted, updates `main`, makes
+   the task's branch, reads the spec and the notes from earlier tasks, does
+   the task, runs the tests and stops. Nothing is committed yet.
+2. Review the changes in Source Control. Then **`/ship`**: re-runs the tests,
+   checks that only the task's files changed, writes the hand-off notes to
+   [NOTES.md](NOTES.md), ticks the board, commits, pushes, opens and merges the
+   pull request, and returns to `main`.
+
+`/ship` needs the GitHub CLI, installed and logged in once: `winget install --id GitHub.cli -e`,
+reopen VS Code, then `gh auth login`. Without it, `/ship` stops after the
+push and you open the pull request on GitHub.
+
+The commands live in `.claude/skills/task/` and `.claude/skills/ship/`. If
+`/task` does not appear when you type `/`, ask Claude: "Follow
+.claude/skills/task/SKILL.md for B02".
+
+## How to run a task by hand
 
 1. Start a branch from the latest `main`:
 
@@ -46,7 +66,7 @@ every API task edits `orbit/api/app.py`.
 
 | Done | ID | Task | Lane | Needs | Size |
 |---|---|---|---|---|---|
-| [ ] | [B01](B01-scenario-labels.md) | Scenario labels schema | Simulator | none | S |
+| [x] | [B01](B01-scenario-labels.md) | Scenario labels schema | Simulator | none | S |
 | [ ] | [B02](B02-simulator-healthy.md) | Simulator v1: healthy crew | Simulator | B01 | M |
 | [ ] | [B03](B03-simulator-illness.md) | Simulator v2: illness episodes and labels | Simulator | B02 | M |
 | [ ] | [B04](B04-simulator-lookalikes.md) | Simulator v3: look-alikes and sensor faults | Simulator | B03 | M |
@@ -58,7 +78,7 @@ every API task edits `orbit/api/app.py`.
 | [ ] | [B10](B10-compare-and-switch.md) | Compare learned vs starter, then switch | AI | B06, B08, B09 | S |
 | [ ] | [B11](B11-wearable-import.md) | Wearable CSV import | Data | none | M |
 | [ ] | [B12](B12-space-weather.md) | NASA space weather feed | Data | none | M |
-| [ ] | [B13](B13-api-past-day.md) | Past-day endpoint for replay | API | none | S |
+| [x] | [B13](B13-api-past-day.md) | Past-day endpoint for replay | API | none | S |
 | [ ] | [B14](B14-api-consent.md) | Consent editing endpoint | API | B13 (order only) | S |
 | [ ] | [B15](B15-api-shared-status.md) | Shared status for the crew view | API | B14 (order only) | S |
 | [ ] | [B16](B16-outbox.md) | Outbox with comms delay | API | B15 (order only) | M |
@@ -84,6 +104,14 @@ do not edit `orbit/api/app.py` at the same time.
 | 5 | B06, B09, B17 |
 | 6 | B10, B18 |
 | Any time | B21, B22 |
+
+## Order for one person
+
+Every task comes after the tasks it needs, and the endpoints the frontend
+waits for come early:
+
+B01 → B13 → B02 → B07 → B03 → B14 → B04 → B05 → B15 → B20 → B06 → B08 →
+B16 → B09 → B17 → B10 → B18 → B19 → B11 → B12 → B21 → B22
 
 **Critical path:** B01 → B02 → B03 → B04 → B09 → B10. The simulator is the
 long pole. If it runs late, B09 can first train on B03's output (illness only,
