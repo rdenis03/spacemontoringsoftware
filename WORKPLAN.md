@@ -80,9 +80,11 @@ Doar aceste fișiere sunt atinse de amândoi:
 
 ## Git
 
-- Un branch pentru fiecare modul, cu prefixul persoanei:
-  - A: `data/m2-simulator`, `data/m9-eval`, `data/m5-donki`, ...
-  - B: `ui/m12-dashboard`, `ui/m11-checkin`, `ui/m13-sync`, ...
+- Fiecare persoană are **un branch al ei**, pe care lucrează doar ea:
+  - B: `ui/persoana-b`
+  - A: `data/persoana-a`
+- Înainte de fiecare PR, adu-ți branch-ul la zi cu `main`
+  (`git pull origin main`), ca să rezolvi conflictele la tine, nu în `main`.
 - Merge în `main` doar prin PR și doar dacă trec:
   ```bash
   python -m pytest
@@ -91,6 +93,28 @@ Doar aceste fișiere sunt atinse de amândoi:
 - Merge-uri dese, ideal cel puțin o dată pe zi, ca să nu se adune diferențe mari.
 - Starter-ele rămân înregistrate și active în `orbit.toml` până când modulul nou
   trece testele de contract și comparația M9.
+
+---
+
+## Baza de date: SQLite local
+
+- Fiecare lucrează cu **propria bază SQLite locală** (`data/orbit.db`, din
+  `[storage]` în `orbit.toml`). Nu există server și nici bază comună.
+- `data/` și `*.db` sunt în `.gitignore`: **baza de date nu se pune în git.**
+  Ce împărțim sunt datele sursă (`examples/`, simulatorul), din care oricine
+  poate reconstrui baza.
+- `python -m orbit serve` încarcă automat datele de exemplu dacă baza e goală.
+- `python -m orbit demo` rulează totul în memorie și nu atinge baza locală.
+- Dacă baza ajunge într-o stare ciudată sau s-a schimbat structura ei (de
+  exemplu, B adaugă tabela `outbox` pentru M13):
+  ```bash
+  python -m orbit reset    # șterge baza locală
+  python -m orbit ingest   # o reîncarcă din sursele din orbit.toml
+  python -m orbit run      # recalculează evaluările
+  ```
+- Ca să încerci simulatorul fără să-ți strici baza obișnuită, folosește un
+  config separat cu altă cale în `[storage]`, de exemplu `experiments/sim180.toml`
+  cu `database = "data/sim180.db"`.
 
 ---
 
