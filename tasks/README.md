@@ -79,7 +79,7 @@ every API task edits `orbit/api/app.py`.
 | [ ] | [B11](B11-wearable-import.md) | Wearable CSV import | Data | none | M |
 | [ ] | [B12](B12-space-weather.md) | NASA space weather feed | Data | none | M |
 | [x] | [B13](B13-api-past-day.md) | Past-day endpoint for replay | API | none | S |
-| [ ] | [B14](B14-api-consent.md) | Consent editing endpoint | API | B13 (order only) | S |
+| [x] | [B14](B14-api-consent.md) | Consent editing endpoint | API | B13 (order only) | S |
 | [ ] | [B15](B15-api-shared-status.md) | Shared status for the crew view | API | B14 (order only) | S |
 | [ ] | [B16](B16-outbox.md) | Outbox with comms delay | API | B15 (order only) | M |
 | [ ] | [B17](B17-earth-report.md) | Plain-language report for Earth | API | B16 | S |

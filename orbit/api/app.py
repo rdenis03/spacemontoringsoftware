@@ -6,6 +6,7 @@ dashboard and the command line always show exactly the same results.
     GET  /api/health                         is it running, which modules are active
     GET  /api/signals                        signal registry for labels and units
     GET  /api/crew                           crew list
+    PUT  /api/crew/{id}/consent              which categories may go to Earth (M13)
     GET  /api/overview                       latest level for every astronaut (M14)
     GET  /api/crew/{id}/status               latest assessment + reasons + actions (M12)
     GET  /api/crew/{id}/day?as_of=           the same for any past assessment (replay)
@@ -77,6 +78,12 @@ class OverviewRow(BaseModel):
     assessed_at: datetime | None
 
 
+class ConsentUpdate(BaseModel):
+    """The categories the astronaut shares with Earth. An empty list shares nothing."""
+
+    share_with_earth: list[SignalCategory] = Field(examples=[["vital", "sleep"]])
+
+
 class RunRequest(BaseModel):
     start: date | None = None
     end: date | None = None
@@ -122,6 +129,19 @@ def create_app(pipeline: Pipeline, *, mission_name: str = "ORBIT mission") -> Fa
     @app.get("/api/crew")
     def crew() -> list[CrewMember]:
         return store.crew()
+
+    @app.put("/api/crew/{astronaut_id}/consent")
+    def consent(astronaut_id: str, body: ConsentUpdate) -> CrewMember:
+        """Change which kinds of data may leave the spacecraft.
+
+        Readings of other categories stay onboard. Score and level are always
+        sent (the consent gate's rule), so a hidden emergency is impossible.
+        """
+        member = member_or_404(astronaut_id)
+        updated = CrewMember.model_validate(
+            {**member.model_dump(), "share_with_earth": body.share_with_earth})
+        store.upsert_crew([updated])
+        return updated
 
     @app.get("/api/overview")
     def overview() -> list[OverviewRow]:
