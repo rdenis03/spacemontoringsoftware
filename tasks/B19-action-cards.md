@@ -16,6 +16,7 @@ hand-edited library and make them specific to each virus.
 - `examples/action_cards.jsonl` and `examples/make_examples.py` (generated;
   never hand-edit `examples/*.jsonl`).
 - `orbit/schema/models.py` (`ActionCard`), `tests/test_pipeline.py` (the demo story).
+- `tasks/NOTES.md`, the B15 section: how the shared crew view hides cards.
 
 ## Files
 
@@ -41,6 +42,13 @@ hand-edited library and make them specific to each virus.
 3. Orange and red cards set `escalate_to`. Steps are imperative, under 200
    characters, doable onboard, no medication or doses; the rationale is plain language.
 4. Point `cards_path` in `orbit.toml` to `cards/action_cards.jsonl`.
+5. Keep each card's `triggers` within one signal category (see `get_spec(signal).category`).
+   B15's shared crew view (`?view=shared`) hides any card that has a trigger in a
+   category the astronaut does not share, replacing it with "Private action" (see
+   the B15 section of `tasks/NOTES.md`). A card mixing a lab signal with a symptom
+   is hidden whenever symptoms are private, which is the default. So split such
+   pairs into one card per category, for example a VZV card on `saliva_vzv_dna`
+   (lab) and a rash card on `symptom_rash_tingling` (symptom).
 
 ## Tests (`tests/test_actions.py`)
 

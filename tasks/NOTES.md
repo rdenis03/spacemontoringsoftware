@@ -95,3 +95,14 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - A solar event gives one label per astronaut, so it counts 4 times in `by_scenario` and `confounder_alert_rate`.
 - `Episode` here is an alert run, not the simulator's illness `Episode`; import by module.
 - Starter modules, default 180 d x 4 crew, seed 1: sensitivity 1.0 (8/8), lead time median 0.375 d (-0.125 to 1.875), 0 false alarms.
+
+## B15 · Shared status for the crew view
+
+- `GET /api/crew/{id}/status?view=shared` and `GET /api/crew/{id}/day?as_of=&view=shared`; `View = Literal["full", "shared"]` (default `full`, exactly as before; anything else gives 422).
+- `shared_view(result, member)` (inside `create_app`) builds the shared `DayResult`; reuse it for any new endpoint that returns one.
+- Reasons go through `pipeline.sync.package(member, [], [assessment])`: private ones get `PRIVATE_LABEL`, same points and order, so the points still add up. Score and level are always kept.
+- Anomalies and baselines of unshared categories are dropped (the starter detector only makes vital and sleep anomalies).
+- Action cards: shown in full only when all `triggers` are in shared categories (no triggers = always shown). Otherwise `card_id` `private-N` (in card order), title `PRIVATE_CARD_TITLE`, one step `PRIVATE_CARD_STEP`, `PRIVATE_CARD_RATIONALE`, triggers emptied; `level` and `escalate_to` kept. Constants in `orbit/api/app.py`.
+- All-or-nothing: one private trigger hides the whole card, harmless steps included (today `reduce-load` and `saliva-test`). B19: keep each card's triggers within one category.
+- Frontend: `private-N` IDs depend on order and are not stable between days; do not match on them.
+- The crew view follows `share_with_earth` (B14); there is no separate crew consent. `/api/overview` already shows only callsign, level and score.

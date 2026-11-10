@@ -9,7 +9,9 @@ dashboard and the command line always show exactly the same results.
     PUT  /api/crew/{id}/consent              which categories may go to Earth (M13)
     GET  /api/overview                       latest level for every astronaut (M14)
     GET  /api/crew/{id}/status               latest assessment + reasons + actions (M12)
-    GET  /api/crew/{id}/day?as_of=           the same for any past assessment (replay)
+                                             ?view=shared: what the crew may see (M14)
+    GET  /api/crew/{id}/day?as_of=           the same for any past assessment (replay),
+                                             also with ?view=shared
     GET  /api/crew/{id}/observations         readings for charts (?signal=&start=&end=)
     GET  /api/crew/{id}/baselines            "your normal" band over time (?signal=)
     GET  /api/crew/{id}/assessments          score history for the trend line
@@ -25,7 +27,7 @@ Interactive docs: http://localhost:8000/docs once the server runs.
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,6 +37,7 @@ from orbit.core.interfaces import DayResult, EarthPacket
 from orbit.core.pipeline import Pipeline
 from orbit.schema import (
     SCHEMA_VERSION,
+    ActionCard,
     Baseline,
     ContextEvent,
     CrewMember,
@@ -48,6 +51,14 @@ from orbit.schema import (
 from orbit.schema.export import registry_document
 
 # ---- request and response bodies --------------------------------------------
+
+View = Literal["full", "shared"]
+"""``full``: everything (the astronaut's own view). ``shared``: what the crew may see."""
+
+# Shared view: what replaces an action card that is triggered by a private signal.
+PRIVATE_CARD_TITLE = "Private action"
+PRIVATE_CARD_STEP = "Details kept private by the astronaut"
+PRIVATE_CARD_RATIONALE = "The astronaut has not shared the reasons for this step."
 
 
 class CheckIn(BaseModel):
@@ -117,6 +128,42 @@ def create_app(pipeline: Pipeline, *, mission_name: str = "ORBIT mission") -> Fa
             raise HTTPException(404, f"unknown astronaut '{astronaut_id}'")
         return member
 
+    def shared_view(result: DayResult, member: CrewMember) -> DayResult:
+        """What the commander and crew medical officer may see (M14).
+
+        Reasons go through the sync slot's consent gate (private ones get its
+        neutral label); anomalies and baselines of categories the astronaut does
+        not share are dropped. Score and level stay. An action card is shown in
+        full only if all its triggers are shared (cards without triggers always
+        are); otherwise it keeps its level and escalate_to but its text and ID
+        are replaced, so the steps cannot give a private symptom away.
+        """
+        assessment = result.assessment
+        if assessment is not None:
+            [assessment] = pipeline.sync.package(member, [], [assessment]).assessments
+
+        def shared(signal: SignalType) -> bool:
+            return member.shares(get_spec(signal).category)
+
+        cards, hidden = [], 0
+        for card in result.actions:
+            if all(shared(signal) for signal in card.triggers):
+                cards.append(card)
+                continue
+            hidden += 1
+            cards.append(ActionCard(
+                card_id=f"private-{hidden}", level=card.level, title=PRIVATE_CARD_TITLE,
+                steps=(PRIVATE_CARD_STEP,), rationale=PRIVATE_CARD_RATIONALE,
+                escalate_to=card.escalate_to,
+            ))
+
+        return result.model_copy(update={
+            "assessment": assessment,
+            "anomalies": tuple(a for a in result.anomalies if shared(a.signal)),
+            "baselines": tuple(b for b in result.baselines if shared(b.signal)),
+            "actions": tuple(cards),
+        })
+
     @app.get("/api/health")
     def health() -> dict[str, Any]:
         return {"status": "ok", "mission": mission_name, "schema_version": SCHEMA_VERSION,
@@ -157,12 +204,12 @@ def create_app(pipeline: Pipeline, *, mission_name: str = "ORBIT mission") -> Fa
         return rows
 
     @app.get("/api/crew/{astronaut_id}/status")
-    def status(astronaut_id: str) -> DayResult:
-        member_or_404(astronaut_id)
+    def status(astronaut_id: str, view: View = "full") -> DayResult:
+        member = member_or_404(astronaut_id)
         result = pipeline.status(astronaut_id)
         if result is None:
             raise HTTPException(404, "no assessment yet; run the pipeline first")
-        return result
+        return shared_view(result, member) if view == "shared" else result
 
     @app.get("/api/crew/{astronaut_id}/day")
     def day(
@@ -171,6 +218,7 @@ def create_app(pipeline: Pipeline, *, mission_name: str = "ORBIT mission") -> Fa
             description="An `assessed_at` value from /assessments. No timezone means UTC.",
             examples=["2027-04-02T10:00:00Z"],
         ),
+        view: View = "full",
     ) -> DayResult:
         """The full saved result of one past assessment, for the mission replay slider."""
         member = member_or_404(astronaut_id)
@@ -182,7 +230,7 @@ def create_app(pipeline: Pipeline, *, mission_name: str = "ORBIT mission") -> Fa
                      "use an assessed_at value from /assessments")
         assessment = found[0]
         when = assessment.assessed_at
-        return DayResult(
+        result = DayResult(
             astronaut_id=astronaut_id,
             as_of=when,
             mission_day=member.mission_day(when),
@@ -191,6 +239,7 @@ def create_app(pipeline: Pipeline, *, mission_name: str = "ORBIT mission") -> Fa
             assessment=assessment,
             actions=tuple(store.recommendations(assessment.assessment_id)),
         )
+        return shared_view(result, member) if view == "shared" else result
 
     @app.get("/api/crew/{astronaut_id}/observations")
     def observations(
