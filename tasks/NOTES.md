@@ -107,6 +107,18 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - Frontend: `private-N` IDs depend on order and are not stable between days; do not match on them.
 - The crew view follows `share_with_earth` (B14); there is no separate crew consent. `/api/overview` already shows only callsign, level and score.
 
+## B20 · Live body demo tool
+
+- `python tools/live_demo.py seed --id AST-03 --callsign Live --resting-hr 62 --skin-temp 34.1 --hrv 55 --resp-rate 14 --spo2 97 --sleep 7 [--config]`: crew member + 14 nights at 06:00 UTC ending last night (`source="manual"`, seeded noise), ingested into the config's database, then assessed now (green).
+- `python tools/live_demo.py push --id AST-03 --resting-hr 95 --skin-temp 34.8 --fever 2 [--api http://localhost:8000]`: readings stamped now to `POST /api/observations`, then a check-in stamped now (mood/stress 3) that makes the API assess; prints level and top 3 reasons. Stage script in the module docstring.
+- Functions: `build_seed(astronaut_id, callsign, normals, now, nights=14, seed=1) -> SourceBatch`, `build_push(astronaut_id, readings, now) -> list[dict]`, `build_checkin(now, mood, stress, symptoms) -> dict`, `describe(day_result_json) -> str`, `night_stamps(now, nights)`.
+- Starter scorer: HR +30 and temp +0.7 alone = 15 points (green); yellow needs 25, so the stage script adds `--fever 2` (27, yellow). Revisit if B08-B10 change the weights.
+- Every push sends all five symptom flags (`--fever --fatigue --sore-throat --headache --aches`, 0 unless given), so a later push clears an earlier fever.
+- Seed IDs `f"{id}-{signal}-{yyyymmdd}"`: re-seeding the same day replaces. Re-seeding re-saves the crew member, which resets consent to the defaults.
+- `--from-csv` calls `create("source", "wearable_csv", path=, astronaut_id=)` (B11's planned options); without B11 it stops before opening the database.
+- Tests run in-process (`TestClient`, `Store(":memory:")`); the tool loads via importlib from `tools/live_demo.py` (not a package).
+- Checked against a running `serve` with a scratch database: green 0.0, yellow 27.0, back to green 0.0 in `/api/overview`.
+
 ## B16 · Outbox with comms delay
 
 - Done on `ui/persoana-b` together with the frontend's Earth comms screen, then aligned to this spec.

@@ -85,7 +85,7 @@ every API task edits `orbit/api/app.py`.
 | [ ] | [B17](B17-earth-report.md) | Plain-language report for Earth | API | B16 | S |
 | [ ] | [B18](B18-auto-send.md) | Auto-send on orange or red | API | B17 | S |
 | [x] | [B19](B19-action-cards.md) | Action cards v2 | Crew guidance | none | S |
-| [ ] | [B20](B20-live-demo-tool.md) | Live body demo tool | Demo | none | S |
+| [x] | [B20](B20-live-demo-tool.md) | Live body demo tool | Demo | none | S |
 | [ ] | [B21](B21-ewma-baseline.md) | EWMA baseline (stretch) | Analytics | none | S |
 | [ ] | [B22](B22-cusum-detector.md) | CUSUM detector (stretch) | Analytics | none | S |
 
