@@ -139,3 +139,15 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - One category per card, as asked: VZV, HSV-1, EBV and CRP/WBC are lab cards (`reduce-load`, `hsv-test`, `ebv-test`, `inflammation-check`); rash, mouth sores, throat/glands and fever are symptom cards (`protect-rash`, `mouth-care`, `throat-glands`, `limit-spread`). Lab cards never name a symptom, so the shared view can show them in full.
 - Demo story unchanged: day 89 `saliva-test`, `rest-watch`; day 90 `reduce-load` (VZV), `protect-rash`, `tell-cmo`. In the shared view day 90 shows `reduce-load` and `tell-cmo` in full and `protect-rash` as "Private action".
 - Tests in `tests/test_actions.py`.
+
+## B06 · Evaluation runner and CLI
+
+- `python -m orbit.evaluation --config orbit.toml [--config X.toml ...] --days 180 --crew 4 --seeds 1 2 3 4 5 [--min-level yellow] --out data/reports/evaluation.json`. Reports go under `data/` (git-ignored), not `reports/`.
+- `orbit.evaluation.runner`: `run_one(config, seed, days=180, crew=4, min_level) -> dict` (evaluate() keys plus `seed`, `observations`, `events`, `failed_stages`, `seconds`, `lead_times_days`, `lead_time_days`); `run_all(configs, seeds, ...) -> report`; `table(report) -> str`; `lead_times_days(assessments, labels, min_level) -> list[int]`.
+- Report: `{"simulated", "settings", "configs": [{"config", "path", "modules", "runs", "mean", "by_scenario"}]}`; `mean` holds `{mean, sd, n}` for sensitivity, `lead_time_days_median`, `lead_time_exact_median`, `false_alarms_per_30_days`, `confounder_alert_rate`.
+- Seeds with no value (e.g. no illness) are left out of a mean; `n` counts the seeds used; `sd` is None with one seed.
+- A config's own `[[sources]]` are ignored: the simulator (`days`, `crew_size`, `seed`, other options default) replaces them, so `experiments/*.toml` need no source block.
+- Table shows baseline, detector and scorer only; lead time in whole calendar days (B05 decision), exact SPEC value in the JSON.
+- Starter, 180 d x 4 crew x seeds 1-5 (~13 s): sensitivity 1.00 ± 0.00 (39/39), lead 0.6 ± 0.4 whole days (19 on symptom day, 15 one day early, 5 two days), 0 false alarms, confounder alert rate 0.06 ± 0.06. Numbers in README *Results*.
+- Confounder alert rate is not 0 only because look-alike windows overlap illness alerts; the starter never alerted outside an illness (alert episodes = illnesses in every seed).
+- B10: rerun the README command with the learned config on held-out seeds 101-105.
