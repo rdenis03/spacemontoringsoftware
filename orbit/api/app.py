@@ -8,6 +8,7 @@ dashboard and the command line always show exactly the same results.
     GET  /api/crew                           crew list
     GET  /api/overview                       latest level for every astronaut (M14)
     GET  /api/crew/{id}/status               latest assessment + reasons + actions (M12)
+    GET  /api/crew/{id}/day?as_of=           the same for any past assessment (replay)
     GET  /api/crew/{id}/observations         readings for charts (?signal=&start=&end=)
     GET  /api/crew/{id}/baselines            "your normal" band over time (?signal=)
     GET  /api/crew/{id}/assessments          score history for the trend line
@@ -142,6 +143,34 @@ def create_app(pipeline: Pipeline, *, mission_name: str = "ORBIT mission") -> Fa
         if result is None:
             raise HTTPException(404, "no assessment yet; run the pipeline first")
         return result
+
+    @app.get("/api/crew/{astronaut_id}/day")
+    def day(
+        astronaut_id: str,
+        as_of: datetime = Query(
+            description="An `assessed_at` value from /assessments. No timezone means UTC.",
+            examples=["2027-04-02T10:00:00Z"],
+        ),
+    ) -> DayResult:
+        """The full saved result of one past assessment, for the mission replay slider."""
+        member = member_or_404(astronaut_id)
+        when = _utc(as_of)
+        found = store.assessments(astronaut_id, start=when, end=when)
+        if not found:
+            raise HTTPException(
+                404, f"no assessment for '{astronaut_id}' at {when.isoformat()}; "
+                     "use an assessed_at value from /assessments")
+        assessment = found[0]
+        when = assessment.assessed_at
+        return DayResult(
+            astronaut_id=astronaut_id,
+            as_of=when,
+            mission_day=member.mission_day(when),
+            baselines=tuple(store.baselines(astronaut_id, start=when, end=when)),
+            anomalies=tuple(store.anomalies_at(astronaut_id, when)),
+            assessment=assessment,
+            actions=tuple(store.recommendations(assessment.assessment_id)),
+        )
 
     @app.get("/api/crew/{astronaut_id}/observations")
     def observations(
