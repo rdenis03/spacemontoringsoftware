@@ -196,3 +196,16 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - Too long: actions are counted instead of listed ("3 actions"), then reasons are cut to 60 characters, then the line is cut with "…".
 - AST-01 day 90, default sharing: 398 characters; no "rash" or "fatigue". After sharing `symptom`: "Rash or tingling: mild in the check-in" and the card "Look after the rash".
 - `tests/test_sync.py` (B16) changed by one line, with the team's agreement: it expected `summary == ""` until B17.
+
+## B10 · Compare learned vs starter, then switch
+
+- Not switched: `orbit.toml` keeps `[modules.scorer] use = "rule_based"`, so the live `model_version` is still `rule_based-0.1` (dashboard badge unchanged). With `experiments/learned.toml` it is `learned-trained-s1-20-d180-c4`.
+- Held-out seeds 101-105, 180 d x 4 crew (simulated): rule_based sensitivity 1.00 (45/45), lead 0.1 ± 0.2 whole days, 0 false alarms, confounder alert rate 0.14; learned 1.00 (45/45), 0.4 ± 0.4, 0, 0.15. Before symptom day: learned 24 of 45, rule_based 16 of 45.
+- The learned scorer met the task's switch rule and kept the demo story (yellow day 89, orange 71 day 90). The team still held the switch back.
+- Why: the trained weights barely count check-in symptoms (under 2 points per level; stress and mood 0). Moderate fever + sore throat + low mood + high stress = 4 points (rule_based over 20), so a check-in alone no longer changes the status and the B20 live demo stays green (23.5 with `--fever 2`).
+- Cause: in the simulator symptoms never come without vital or lab changes, so the model relies on those. The three evaluation numbers do not measure it.
+- To switch later: give symptoms a floor in `orbit/learning/train.py` (or add symptom-only illness to the simulator), retrain, rerun the comparison, then change `orbit.toml`.
+- A switch breaks 10 tests that pin rule_based values, in `test_api.py` (check-in score > 20), `test_live_demo.py` (3), `test_evaluation.py`, `test_scorer_learned.py` ("orbit.toml keeps the starter until B10") and `test_earth_report.py` (4: "ORANGE (70)", the rash reason). `tests/test_pipeline.py` passes with either scorer and was not changed.
+- Report: `reports/learned_vs_starter.json` (committed; `reports/` is not git-ignored, unlike `data/reports/`). Its config `path` fields were made relative by hand after the run; a rerun writes absolute paths again.
+- Numbers are in README *Results* ("Learned scorer vs starter") and in the `scorer_learned.py` docstring, marked simulated.
+- B18: thresholds for auto-send come from rule_based, as before.

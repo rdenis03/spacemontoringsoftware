@@ -179,10 +179,40 @@ python -m orbit.evaluation --config orbit.toml --days 180 --crew 4 --seeds 1 2 3
     --out data/reports/evaluation.json
 ```
 
-To compare a new module (B10: the learned scorer on held-out seeds 101 to 105),
-add its config and change the seeds:
+### Learned scorer vs starter (B10)
+
+**Simulated, not clinical.** The learned scorer (`experiments/learned.toml`,
+weights `trained-s1-20-d180-c4`) against the starter `rule_based`, on seeds 101
+to 105, which the training never saw. 180 days x 4 crew, same baseline and
+detector, an alert is yellow or worse:
+
+| Metric (mean ± SD over 5 seeds) | `rule_based` (starter) | `learned` |
+|---|---|---|
+| Sensitivity | 1.00 ± 0.00 (45 of 45) | 1.00 ± 0.00 (45 of 45) |
+| Lead time, median, whole days before symptom day | 0.1 ± 0.2 | 0.4 ± 0.4 |
+| Lead time, median, exact (SPEC M9) | -0.03 ± 0.22 days | 0.28 ± 0.42 days |
+| False alarms per 30 astronaut-days | 0.00 ± 0.00 | 0.00 ± 0.00 |
+| Confounder alert rate | 0.14 ± 0.06 | 0.15 ± 0.07 |
+
+- The learned scorer warns earlier with no more false alarms: it caught 24 of
+  45 illnesses before symptom day (18 one day early, 6 two days), the starter
+  16 of 45 (13 and 3).
+- It meets the switch rule (sensitivity and lead time at least as good, false
+  alarms no higher), and the demo story holds with it (yellow on day 89, orange
+  71 on day 90).
+- **`orbit.toml` still uses `rule_based`: the team held the switch back.** The
+  learned weights barely count what the astronaut reports. A check-in with
+  moderate fever, sore throat, low mood and high stress scores 4 points
+  (starter: over 20), so the check-in and the live demo (`tools/live_demo.py`)
+  would no longer turn yellow. In the simulator symptoms never come without
+  vital or lab changes, so the model learned to rely on those. The three
+  numbers above do not measure this.
+- To switch later: give symptoms a floor in the trainer (or add symptom-only
+  illnesses to the simulator), retrain, rerun this comparison.
+
+Reproduce (about 30 s; the report is committed as `reports/learned_vs_starter.json`,
+with config paths made relative):
 
 ```bash
-python -m orbit.evaluation --config orbit.toml --config experiments/<learned>.toml \
-    --days 180 --crew 4 --seeds 101 102 103 104 105 --out data/reports/evaluation-heldout.json
+python -m orbit.evaluation --config orbit.toml --config experiments/learned.toml     --days 180 --crew 4 --seeds 101 102 103 104 105 --out reports/learned_vs_starter.json
 ```

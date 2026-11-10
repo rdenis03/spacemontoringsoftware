@@ -1,0 +1,1201 @@
+{
+  "simulated": true,
+  "settings": {
+    "days": 180,
+    "crew": 4,
+    "seeds": [
+      101,
+      102,
+      103,
+      104,
+      105
+    ],
+    "min_level": "yellow"
+  },
+  "configs": [
+    {
+      "config": "orbit.toml",
+      "path": "orbit.toml",
+      "modules": {
+        "baseline": "rolling_median",
+        "detector": "robust_z",
+        "scorer": "rule_based",
+        "actions": "protocol",
+        "sync": "consent_gate"
+      },
+      "runs": [
+        {
+          "seed": 101,
+          "observations": 13983,
+          "events": 28,
+          "failed_stages": 0,
+          "seconds": 2.0,
+          "lead_times_days": [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "lead_time_days": {
+            "n": 6,
+            "median": 0.0,
+            "min": 0,
+            "max": 1
+          },
+          "min_level": "yellow",
+          "astronaut_days": 720,
+          "assessments": 720,
+          "alerts": 32,
+          "alert_episodes": 6,
+          "labels": {
+            "should_alert": 6,
+            "should_not_alert": 57
+          },
+          "detected": 6,
+          "sensitivity": 1.0,
+          "lead_times": [
+            0.875,
+            -0.125,
+            -0.125,
+            -0.125,
+            -0.125,
+            -0.125
+          ],
+          "lead_time": {
+            "n": 6,
+            "median": -0.125,
+            "min": -0.125,
+            "max": 0.875
+          },
+          "false_alarms": {
+            "count": 0,
+            "per_30_days": 0.0,
+            "confounder_count": 0,
+            "fault_count": 0
+          },
+          "confounder_alert_rate": 0.14705882352941177,
+          "by_scenario": {
+            "viral_reactivation": {
+              "labels": 4,
+              "alerted": 4,
+              "rate": 1.0
+            },
+            "respiratory_infection": {
+              "labels": 2,
+              "alerted": 2,
+              "rate": 1.0
+            },
+            "eva_exertion": {
+              "labels": 22,
+              "alerted": 3,
+              "rate": 0.13636363636363635
+            },
+            "sleep_shift": {
+              "labels": 4,
+              "alerted": 0,
+              "rate": 0.0
+            },
+            "solar_particle_event": {
+              "labels": 8,
+              "alerted": 2,
+              "rate": 0.25
+            },
+            "sensor_fault": {
+              "labels": 17,
+              "alerted": 1,
+              "rate": 0.058823529411764705
+            },
+            "missing_data": {
+              "labels": 6,
+              "alerted": 1,
+              "rate": 0.16666666666666666
+            }
+          }
+        },
+        {
+          "seed": 102,
+          "observations": 13928,
+          "events": 22,
+          "failed_stages": 0,
+          "seconds": 2.19,
+          "lead_times_days": [
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+            0,
+            1
+          ],
+          "lead_time_days": {
+            "n": 8,
+            "median": 0.5,
+            "min": 0,
+            "max": 1
+          },
+          "min_level": "yellow",
+          "astronaut_days": 720,
+          "assessments": 720,
+          "alerts": 40,
+          "alert_episodes": 8,
+          "labels": {
+            "should_alert": 8,
+            "should_not_alert": 48
+          },
+          "detected": 8,
+          "sensitivity": 1.0,
+          "lead_times": [
+            -0.125,
+            -0.125,
+            0.875,
+            0.875,
+            0.875,
+            -0.125,
+            -0.125,
+            0.875
+          ],
+          "lead_time": {
+            "n": 8,
+            "median": 0.375,
+            "min": -0.125,
+            "max": 0.875
+          },
+          "false_alarms": {
+            "count": 0,
+            "per_30_days": 0.0,
+            "confounder_count": 0,
+            "fault_count": 0
+          },
+          "confounder_alert_rate": 0.04,
+          "by_scenario": {
+            "viral_reactivation": {
+              "labels": 5,
+              "alerted": 5,
+              "rate": 1.0
+            },
+            "respiratory_infection": {
+              "labels": 3,
+              "alerted": 3,
+              "rate": 1.0
+            },
+            "eva_exertion": {
+              "labels": 12,
+              "alerted": 1,
+              "rate": 0.08333333333333333
+            },
+            "sleep_shift": {
+              "labels": 9,
+              "alerted": 0,
+              "rate": 0.0
+            },
+            "solar_particle_event": {
+              "labels": 4,
+              "alerted": 0,
+              "rate": 0.0
+            },
+            "sensor_fault": {
+              "labels": 11,
+              "alerted": 0,
+              "rate": 0.0
+            },
+            "missing_data": {
+              "labels": 12,
+              "alerted": 1,
+              "rate": 0.08333333333333333
+            }
+          }
+        },
+        {
+          "seed": 103,
+          "observations": 13985,
+          "events": 22,
+          "failed_stages": 0,
+          "seconds": 2.19,
+          "lead_times_days": [
+            0,
+            1,
+            2,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "lead_time_days": {
+            "n": 9,
+            "median": 0,
+            "min": 0,
+            "max": 2
+          },
+          "min_level": "yellow",
+          "astronaut_days": 720,
+          "assessments": 720,
+          "alerts": 48,
+          "alert_episodes": 9,
+          "labels": {
+            "should_alert": 9,
+            "should_not_alert": 58
+          },
+          "detected": 9,
+          "sensitivity": 1.0,
+          "lead_times": [
+            -0.125,
+            0.875,
+            1.875,
+            -0.125,
+            -0.125,
+            -0.125,
+            0.875,
+            -0.125,
+            -0.125
+          ],
+          "lead_time": {
+            "n": 9,
+            "median": -0.125,
+            "min": -0.125,
+            "max": 1.875
+          },
+          "false_alarms": {
+            "count": 0,
+            "per_30_days": 0.0,
+            "confounder_count": 0,
+            "fault_count": 0
+          },
+          "confounder_alert_rate": 0.17857142857142858,
+          "by_scenario": {
+            "viral_reactivation": {
+              "labels": 7,
+              "alerted": 7,
+              "rate": 1.0
+            },
+            "respiratory_infection": {
+              "labels": 2,
+              "alerted": 2,
+              "rate": 1.0
+            },
+            "eva_exertion": {
+              "labels": 19,
+              "alerted": 3,
+              "rate": 0.15789473684210525
+            },
+            "sleep_shift": {
+              "labels": 1,
+              "alerted": 0,
+              "rate": 0.0
+            },
+            "solar_particle_event": {
+              "labels": 8,
+              "alerted": 2,
+              "rate": 0.25
+            },
+            "sensor_fault": {
+              "labels": 24,
+              "alerted": 4,
+              "rate": 0.16666666666666666
+            },
+            "missing_data": {
+              "labels": 6,
+              "alerted": 0,
+              "rate": 0.0
+            }
+          }
+        },
+        {
+          "seed": 104,
+          "observations": 14013,
+          "events": 20,
+          "failed_stages": 0,
+          "seconds": 2.26,
+          "lead_times_days": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            1,
+            0,
+            0,
+            2,
+            0,
+            1,
+            0,
+            1
+          ],
+          "lead_time_days": {
+            "n": 15,
+            "median": 0,
+            "min": 0,
+            "max": 2
+          },
+          "min_level": "yellow",
+          "astronaut_days": 720,
+          "assessments": 720,
+          "alerts": 84,
+          "alert_episodes": 15,
+          "labels": {
+            "should_alert": 15,
+            "should_not_alert": 59
+          },
+          "detected": 15,
+          "sensitivity": 1.0,
+          "lead_times": [
+            -0.125,
+            -0.125,
+            -0.125,
+            -0.125,
+            -0.125,
+            1.875,
+            -0.125,
+            0.875,
+            -0.125,
+            -0.125,
+            1.875,
+            -0.125,
+            0.875,
+            -0.125,
+            0.875
+          ],
+          "lead_time": {
+            "n": 15,
+            "median": -0.125,
+            "min": -0.125,
+            "max": 1.875
+          },
+          "false_alarms": {
+            "count": 0,
+            "per_30_days": 0.0,
+            "confounder_count": 0,
+            "fault_count": 0
+          },
+          "confounder_alert_rate": 0.20689655172413793,
+          "by_scenario": {
+            "viral_reactivation": {
+              "labels": 9,
+              "alerted": 9,
+              "rate": 1.0
+            },
+            "respiratory_infection": {
+              "labels": 6,
+              "alerted": 6,
+              "rate": 1.0
+            },
+            "eva_exertion": {
+              "labels": 11,
+              "alerted": 2,
+              "rate": 0.18181818181818182
+            },
+            "sleep_shift": {
+              "labels": 6,
+              "alerted": 1,
+              "rate": 0.16666666666666666
+            },
+            "solar_particle_event": {
+              "labels": 12,
+              "alerted": 3,
+              "rate": 0.25
+            },
+            "sensor_fault": {
+              "labels": 21,
+              "alerted": 5,
+              "rate": 0.23809523809523808
+            },
+            "missing_data": {
+              "labels": 9,
+              "alerted": 3,
+              "rate": 0.3333333333333333
+            }
+          }
+        },
+        {
+          "seed": 105,
+          "observations": 13880,
+          "events": 25,
+          "failed_stages": 0,
+          "seconds": 2.14,
+          "lead_times_days": [
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1
+          ],
+          "lead_time_days": {
+            "n": 7,
+            "median": 0,
+            "min": 0,
+            "max": 1
+          },
+          "min_level": "yellow",
+          "astronaut_days": 720,
+          "assessments": 720,
+          "alerts": 35,
+          "alert_episodes": 7,
+          "labels": {
+            "should_alert": 7,
+            "should_not_alert": 68
+          },
+          "detected": 7,
+          "sensitivity": 1.0,
+          "lead_times": [
+            -0.125,
+            0.875,
+            0.875,
+            -0.125,
+            -0.125,
+            -0.125,
+            0.875
+          ],
+          "lead_time": {
+            "n": 7,
+            "median": -0.125,
+            "min": -0.125,
+            "max": 0.875
+          },
+          "false_alarms": {
+            "count": 0,
+            "per_30_days": 0.0,
+            "confounder_count": 0,
+            "fault_count": 0
+          },
+          "confounder_alert_rate": 0.14705882352941177,
+          "by_scenario": {
+            "viral_reactivation": {
+              "labels": 3,
+              "alerted": 3,
+              "rate": 1.0
+            },
+            "respiratory_infection": {
+              "labels": 4,
+              "alerted": 4,
+              "rate": 1.0
+            },
+            "eva_exertion": {
+              "labels": 13,
+              "alerted": 2,
+              "rate": 0.15384615384615385
+            },
+            "sleep_shift": {
+              "labels": 9,
+              "alerted": 1,
+              "rate": 0.1111111111111111
+            },
+            "solar_particle_event": {
+              "labels": 12,
+              "alerted": 2,
+              "rate": 0.16666666666666666
+            },
+            "sensor_fault": {
+              "labels": 20,
+              "alerted": 0,
+              "rate": 0.0
+            },
+            "missing_data": {
+              "labels": 14,
+              "alerted": 0,
+              "rate": 0.0
+            }
+          }
+        }
+      ],
+      "mean": {
+        "sensitivity": {
+          "mean": 1.0,
+          "sd": 0.0,
+          "n": 5
+        },
+        "lead_time_days_median": {
+          "mean": 0.1,
+          "sd": 0.22360679774997896,
+          "n": 5
+        },
+        "lead_time_exact_median": {
+          "mean": -0.025,
+          "sd": 0.22360679774997896,
+          "n": 5
+        },
+        "false_alarms_per_30_days": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 5
+        },
+        "confounder_alert_rate": {
+          "mean": 0.143917125470878,
+          "sd": 0.0632175575969343,
+          "n": 5
+        }
+      },
+      "by_scenario": {
+        "eva_exertion": {
+          "labels": 77,
+          "alerted": 11,
+          "rate": 0.14285714285714285,
+          "rate_mean": {
+            "mean": 0.14265120844068213,
+            "sd": 0.03691167712995893,
+            "n": 5
+          }
+        },
+        "missing_data": {
+          "labels": 47,
+          "alerted": 5,
+          "rate": 0.10638297872340426,
+          "rate_mean": {
+            "mean": 0.11666666666666665,
+            "sd": 0.13944333775567924,
+            "n": 5
+          }
+        },
+        "respiratory_infection": {
+          "labels": 17,
+          "alerted": 17,
+          "rate": 1.0,
+          "rate_mean": {
+            "mean": 1.0,
+            "sd": 0.0,
+            "n": 5
+          }
+        },
+        "sensor_fault": {
+          "labels": 93,
+          "alerted": 10,
+          "rate": 0.10752688172043011,
+          "rate_mean": {
+            "mean": 0.09271708683473388,
+            "sd": 0.10600122267958129,
+            "n": 5
+          }
+        },
+        "sleep_shift": {
+          "labels": 29,
+          "alerted": 2,
+          "rate": 0.06896551724137931,
+          "rate_mean": {
+            "mean": 0.05555555555555555,
+            "sd": 0.07856742013183861,
+            "n": 5
+          }
+        },
+        "solar_particle_event": {
+          "labels": 44,
+          "alerted": 9,
+          "rate": 0.20454545454545456,
+          "rate_mean": {
+            "mean": 0.18333333333333332,
+            "sd": 0.10865337342004415,
+            "n": 5
+          }
+        },
+        "viral_reactivation": {
+          "labels": 28,
+          "alerted": 28,
+          "rate": 1.0,
+          "rate_mean": {
+            "mean": 1.0,
+            "sd": 0.0,
+            "n": 5
+          }
+        }
+      }
+    },
+    {
+      "config": "learned.toml",
+      "path": "experiments/learned.toml",
+      "modules": {
+        "baseline": "rolling_median",
+        "detector": "robust_z",
+        "scorer": "learned",
+        "actions": "protocol",
+        "sync": "consent_gate"
+      },
+      "runs": [
+        {
+          "seed": 101,
+          "observations": 13983,
+          "events": 28,
+          "failed_stages": 0,
+          "seconds": 2.14,
+          "lead_times_days": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            1
+          ],
+          "lead_time_days": {
+            "n": 6,
+            "median": 0.5,
+            "min": 0,
+            "max": 1
+          },
+          "min_level": "yellow",
+          "astronaut_days": 720,
+          "assessments": 720,
+          "alerts": 35,
+          "alert_episodes": 6,
+          "labels": {
+            "should_alert": 6,
+            "should_not_alert": 57
+          },
+          "detected": 6,
+          "sensitivity": 1.0,
+          "lead_times": [
+            0.875,
+            -0.125,
+            0.875,
+            -0.125,
+            -0.125,
+            0.875
+          ],
+          "lead_time": {
+            "n": 6,
+            "median": 0.375,
+            "min": -0.125,
+            "max": 0.875
+          },
+          "false_alarms": {
+            "count": 0,
+            "per_30_days": 0.0,
+            "confounder_count": 0,
+            "fault_count": 0
+          },
+          "confounder_alert_rate": 0.14705882352941177,
+          "by_scenario": {
+            "viral_reactivation": {
+              "labels": 4,
+              "alerted": 4,
+              "rate": 1.0
+            },
+            "respiratory_infection": {
+              "labels": 2,
+              "alerted": 2,
+              "rate": 1.0
+            },
+            "eva_exertion": {
+              "labels": 22,
+              "alerted": 3,
+              "rate": 0.13636363636363635
+            },
+            "sleep_shift": {
+              "labels": 4,
+              "alerted": 0,
+              "rate": 0.0
+            },
+            "solar_particle_event": {
+              "labels": 8,
+              "alerted": 2,
+              "rate": 0.25
+            },
+            "sensor_fault": {
+              "labels": 17,
+              "alerted": 1,
+              "rate": 0.058823529411764705
+            },
+            "missing_data": {
+              "labels": 6,
+              "alerted": 1,
+              "rate": 0.16666666666666666
+            }
+          }
+        },
+        {
+          "seed": 102,
+          "observations": 13928,
+          "events": 22,
+          "failed_stages": 0,
+          "seconds": 2.12,
+          "lead_times_days": [
+            0,
+            0,
+            1,
+            1,
+            2,
+            0,
+            0,
+            1
+          ],
+          "lead_time_days": {
+            "n": 8,
+            "median": 0.5,
+            "min": 0,
+            "max": 2
+          },
+          "min_level": "yellow",
+          "astronaut_days": 720,
+          "assessments": 720,
+          "alerts": 45,
+          "alert_episodes": 8,
+          "labels": {
+            "should_alert": 8,
+            "should_not_alert": 48
+          },
+          "detected": 8,
+          "sensitivity": 1.0,
+          "lead_times": [
+            -0.125,
+            -0.125,
+            0.875,
+            0.875,
+            1.875,
+            -0.125,
+            -0.125,
+            0.875
+          ],
+          "lead_time": {
+            "n": 8,
+            "median": 0.375,
+            "min": -0.125,
+            "max": 1.875
+          },
+          "false_alarms": {
+            "count": 0,
+            "per_30_days": 0.0,
+            "confounder_count": 0,
+            "fault_count": 0
+          },
+          "confounder_alert_rate": 0.04,
+          "by_scenario": {
+            "viral_reactivation": {
+              "labels": 5,
+              "alerted": 5,
+              "rate": 1.0
+            },
+            "respiratory_infection": {
+              "labels": 3,
+              "alerted": 3,
+              "rate": 1.0
+            },
+            "eva_exertion": {
+              "labels": 12,
+              "alerted": 1,
+              "rate": 0.08333333333333333
+            },
+            "sleep_shift": {
+              "labels": 9,
+              "alerted": 0,
+              "rate": 0.0
+            },
+            "solar_particle_event": {
+              "labels": 4,
+              "alerted": 0,
+              "rate": 0.0
+            },
+            "sensor_fault": {
+              "labels": 11,
+              "alerted": 0,
+              "rate": 0.0
+            },
+            "missing_data": {
+              "labels": 12,
+              "alerted": 1,
+              "rate": 0.08333333333333333
+            }
+          }
+        },
+        {
+          "seed": 103,
+          "observations": 13985,
+          "events": 22,
+          "failed_stages": 0,
+          "seconds": 2.04,
+          "lead_times_days": [
+            0,
+            1,
+            2,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0
+          ],
+          "lead_time_days": {
+            "n": 9,
+            "median": 0,
+            "min": 0,
+            "max": 2
+          },
+          "min_level": "yellow",
+          "astronaut_days": 720,
+          "assessments": 720,
+          "alerts": 53,
+          "alert_episodes": 9,
+          "labels": {
+            "should_alert": 9,
+            "should_not_alert": 58
+          },
+          "detected": 9,
+          "sensitivity": 1.0,
+          "lead_times": [
+            -0.125,
+            0.875,
+            1.875,
+            -0.125,
+            0.875,
+            -0.125,
+            0.875,
+            -0.125,
+            -0.125
+          ],
+          "lead_time": {
+            "n": 9,
+            "median": -0.125,
+            "min": -0.125,
+            "max": 1.875
+          },
+          "false_alarms": {
+            "count": 0,
+            "per_30_days": 0.0,
+            "confounder_count": 0,
+            "fault_count": 0
+          },
+          "confounder_alert_rate": 0.21428571428571427,
+          "by_scenario": {
+            "viral_reactivation": {
+              "labels": 7,
+              "alerted": 7,
+              "rate": 1.0
+            },
+            "respiratory_infection": {
+              "labels": 2,
+              "alerted": 2,
+              "rate": 1.0
+            },
+            "eva_exertion": {
+              "labels": 19,
+              "alerted": 4,
+              "rate": 0.21052631578947367
+            },
+            "sleep_shift": {
+              "labels": 1,
+              "alerted": 0,
+              "rate": 0.0
+            },
+            "solar_particle_event": {
+              "labels": 8,
+              "alerted": 2,
+              "rate": 0.25
+            },
+            "sensor_fault": {
+              "labels": 24,
+              "alerted": 4,
+              "rate": 0.16666666666666666
+            },
+            "missing_data": {
+              "labels": 6,
+              "alerted": 0,
+              "rate": 0.0
+            }
+          }
+        },
+        {
+          "seed": 104,
+          "observations": 14013,
+          "events": 20,
+          "failed_stages": 0,
+          "seconds": 2.06,
+          "lead_times_days": [
+            0,
+            1,
+            0,
+            0,
+            0,
+            2,
+            0,
+            1,
+            0,
+            0,
+            2,
+            1,
+            1,
+            0,
+            2
+          ],
+          "lead_time_days": {
+            "n": 15,
+            "median": 0,
+            "min": 0,
+            "max": 2
+          },
+          "min_level": "yellow",
+          "astronaut_days": 720,
+          "assessments": 720,
+          "alerts": 93,
+          "alert_episodes": 15,
+          "labels": {
+            "should_alert": 15,
+            "should_not_alert": 59
+          },
+          "detected": 15,
+          "sensitivity": 1.0,
+          "lead_times": [
+            -0.125,
+            0.875,
+            -0.125,
+            -0.125,
+            -0.125,
+            1.875,
+            -0.125,
+            0.875,
+            -0.125,
+            -0.125,
+            1.875,
+            0.875,
+            0.875,
+            -0.125,
+            1.875
+          ],
+          "lead_time": {
+            "n": 15,
+            "median": -0.125,
+            "min": -0.125,
+            "max": 1.875
+          },
+          "false_alarms": {
+            "count": 0,
+            "per_30_days": 0.0,
+            "confounder_count": 0,
+            "fault_count": 0
+          },
+          "confounder_alert_rate": 0.20689655172413793,
+          "by_scenario": {
+            "viral_reactivation": {
+              "labels": 9,
+              "alerted": 9,
+              "rate": 1.0
+            },
+            "respiratory_infection": {
+              "labels": 6,
+              "alerted": 6,
+              "rate": 1.0
+            },
+            "eva_exertion": {
+              "labels": 11,
+              "alerted": 2,
+              "rate": 0.18181818181818182
+            },
+            "sleep_shift": {
+              "labels": 6,
+              "alerted": 1,
+              "rate": 0.16666666666666666
+            },
+            "solar_particle_event": {
+              "labels": 12,
+              "alerted": 3,
+              "rate": 0.25
+            },
+            "sensor_fault": {
+              "labels": 21,
+              "alerted": 6,
+              "rate": 0.2857142857142857
+            },
+            "missing_data": {
+              "labels": 9,
+              "alerted": 3,
+              "rate": 0.3333333333333333
+            }
+          }
+        },
+        {
+          "seed": 105,
+          "observations": 13880,
+          "events": 25,
+          "failed_stages": 0,
+          "seconds": 2.22,
+          "lead_times_days": [
+            1,
+            1,
+            2,
+            1,
+            0,
+            1,
+            1
+          ],
+          "lead_time_days": {
+            "n": 7,
+            "median": 1,
+            "min": 0,
+            "max": 2
+          },
+          "min_level": "yellow",
+          "astronaut_days": 720,
+          "assessments": 720,
+          "alerts": 44,
+          "alert_episodes": 7,
+          "labels": {
+            "should_alert": 7,
+            "should_not_alert": 68
+          },
+          "detected": 7,
+          "sensitivity": 1.0,
+          "lead_times": [
+            0.875,
+            0.875,
+            1.875,
+            0.875,
+            -0.125,
+            0.875,
+            0.875
+          ],
+          "lead_time": {
+            "n": 7,
+            "median": 0.875,
+            "min": -0.125,
+            "max": 1.875
+          },
+          "false_alarms": {
+            "count": 0,
+            "per_30_days": 0.0,
+            "confounder_count": 0,
+            "fault_count": 0
+          },
+          "confounder_alert_rate": 0.14705882352941177,
+          "by_scenario": {
+            "viral_reactivation": {
+              "labels": 3,
+              "alerted": 3,
+              "rate": 1.0
+            },
+            "respiratory_infection": {
+              "labels": 4,
+              "alerted": 4,
+              "rate": 1.0
+            },
+            "eva_exertion": {
+              "labels": 13,
+              "alerted": 2,
+              "rate": 0.15384615384615385
+            },
+            "sleep_shift": {
+              "labels": 9,
+              "alerted": 1,
+              "rate": 0.1111111111111111
+            },
+            "solar_particle_event": {
+              "labels": 12,
+              "alerted": 2,
+              "rate": 0.16666666666666666
+            },
+            "sensor_fault": {
+              "labels": 20,
+              "alerted": 0,
+              "rate": 0.0
+            },
+            "missing_data": {
+              "labels": 14,
+              "alerted": 0,
+              "rate": 0.0
+            }
+          }
+        }
+      ],
+      "mean": {
+        "sensitivity": {
+          "mean": 1.0,
+          "sd": 0.0,
+          "n": 5
+        },
+        "lead_time_days_median": {
+          "mean": 0.4,
+          "sd": 0.4183300132670378,
+          "n": 5
+        },
+        "lead_time_exact_median": {
+          "mean": 0.275,
+          "sd": 0.4183300132670378,
+          "n": 5
+        },
+        "false_alarms_per_30_days": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 5
+        },
+        "confounder_alert_rate": {
+          "mean": 0.15105998261373516,
+          "sd": 0.06978816855613344,
+          "n": 5
+        }
+      },
+      "by_scenario": {
+        "eva_exertion": {
+          "labels": 77,
+          "alerted": 12,
+          "rate": 0.15584415584415584,
+          "rate_mean": {
+            "mean": 0.1531775242301558,
+            "sd": 0.04814181148744743,
+            "n": 5
+          }
+        },
+        "missing_data": {
+          "labels": 47,
+          "alerted": 5,
+          "rate": 0.10638297872340426,
+          "rate_mean": {
+            "mean": 0.11666666666666665,
+            "sd": 0.13944333775567924,
+            "n": 5
+          }
+        },
+        "respiratory_infection": {
+          "labels": 17,
+          "alerted": 17,
+          "rate": 1.0,
+          "rate_mean": {
+            "mean": 1.0,
+            "sd": 0.0,
+            "n": 5
+          }
+        },
+        "sensor_fault": {
+          "labels": 93,
+          "alerted": 11,
+          "rate": 0.11827956989247312,
+          "rate_mean": {
+            "mean": 0.10224089635854341,
+            "sd": 0.1230900422561335,
+            "n": 5
+          }
+        },
+        "sleep_shift": {
+          "labels": 29,
+          "alerted": 2,
+          "rate": 0.06896551724137931,
+          "rate_mean": {
+            "mean": 0.05555555555555555,
+            "sd": 0.07856742013183861,
+            "n": 5
+          }
+        },
+        "solar_particle_event": {
+          "labels": 44,
+          "alerted": 9,
+          "rate": 0.20454545454545456,
+          "rate_mean": {
+            "mean": 0.18333333333333332,
+            "sd": 0.10865337342004415,
+            "n": 5
+          }
+        },
+        "viral_reactivation": {
+          "labels": 28,
+          "alerted": 28,
+          "rate": 1.0,
+          "rate_mean": {
+            "mean": 1.0,
+            "sd": 0.0,
+            "n": 5
+          }
+        }
+      }
+    }
+  ]
+}

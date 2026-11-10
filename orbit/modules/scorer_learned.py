@@ -18,10 +18,10 @@ Weights file (JSON; default ``orbit/learning/weights.json``)::
 
 Every key in ``weights`` must be one of ``FEATURE_NAMES`` (B07) and every
 weight must be a number >= 0, or loading raises ``ValueError``. Features
-missing from the file have weight 0. The shipped file holds hand-set
-placeholder weights that mirror ``rule_based`` (about 2.5 per vital deviation,
-1.5 per sleep deviation, 0.5 per drift, ``SYMPTOM_WEIGHTS`` for symptoms, 4 per
-DNA unit, 8 for high CRP, 3 for stress and mood, 2.5 per event severity rank).
+missing from the file have weight 0. The shipped file holds weights
+trained on simulated missions by ``orbit/learning/train.py`` (B09): about 13
+for high CRP, 11 per viral DNA unit, 5 to 6 per deviation unit of respiratory
+rate and skin temperature, under 2 per symptom level, 0 for stress and mood.
 They are illustrative, not clinical.
 
 Scoring: ``points = scale x weight x value`` per feature. Features that share a
@@ -34,6 +34,21 @@ so the reasons always add up to the score before the cap.
 Options:
 
     weights_path   None   path to the weights JSON; None = the shipped file
+
+Evaluation (B10; simulated missions, not clinical). Held-out seeds 101 to 105,
+180 days x 4 crew, alert = yellow or worse, mean ± SD over the seeds; weights
+``trained-s1-20-d180-c4``:
+
+                                        rule_based      learned
+    sensitivity                         1.00 ± 0.00     1.00 ± 0.00   (45 of 45)
+    lead time, median whole days        0.1 ± 0.2       0.4 ± 0.4
+    false alarms per 30 astronaut-days  0.00 ± 0.00     0.00 ± 0.00
+    confounder alert rate               0.14 ± 0.06     0.15 ± 0.07
+
+It meets the switch rule, but ``orbit.toml`` keeps ``rule_based``: these
+weights barely count check-in symptoms (moderate fever, sore throat, low mood
+and high stress score 4 points; rule_based over 20), so a check-in alone no
+longer changes the status. See README *Results*.
 """
 
 from __future__ import annotations
