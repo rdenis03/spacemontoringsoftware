@@ -78,7 +78,7 @@ every API task edits `orbit/api/app.py`.
 | [x] | [B08](B08-learned-scorer.md) | Learned scorer module (placeholder weights) | AI | B07 | S |
 | [x] | [B09](B09-train-scorer.md) | Train the scorer on simulated missions | AI | B04, B07, B08 | M |
 | [x] | [B10](B10-compare-and-switch.md) | Compare learned vs starter, then switch | AI | B06, B08, B09 | S |
-| [ ] | [B11](B11-wearable-import.md) | Wearable CSV import | Data | none | M |
+| [x] | [B11](B11-wearable-import.md) | Wearable CSV import | Data | none | M |
 | [x] | [B13](B13-api-past-day.md) | Past-day endpoint for replay | API | none | S |
 | [x] | [B14](B14-api-consent.md) | Consent editing endpoint | API | B13 (order only) | S |
 | [x] | [B15](B15-api-shared-status.md) | Shared status for the crew view | API | B14 (order only) | S |

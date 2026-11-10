@@ -127,7 +127,22 @@ def test_night_stamps_before_six_end_yesterday():
         datetime(2027, 5, 18, 6, tzinfo=timezone.utc), datetime(2027, 5, 19, 6, tzinfo=timezone.utc)]
 
 
-def test_from_csv_without_b11_says_so(tmp_path):
-    with pytest.raises(SystemExit, match="B11"):
-        live_demo.main(["seed", "--id", "AST-03", "--from-csv", str(tmp_path / "x.csv"),
-                        "--config", str(ROOT / "orbit.toml")])
+def test_from_csv_imports_a_watch_export(tmp_path, capsys):
+    # B11's wearable_csv source exists now. A temporary config keeps the real database clean.
+    database = tmp_path / "live.db"
+    config = tmp_path / "live.toml"
+    config.write_text(f'[storage]\ndatabase = "{database.as_posix()}"\n', encoding="utf-8")
+    now = datetime.now(timezone.utc)
+    export = tmp_path / "watch.csv"
+    rows = [f"{night.isoformat()},{62 + i % 2},34.1,55,14,97,7.0"
+            for i, night in enumerate(live_demo.night_stamps(now, 14))]
+    export.write_text("date,resting_hr,skin_temp,hrv_rmssd,resp_rate,spo2,sleep_duration\n"
+                      + "\n".join(rows) + "\n", encoding="utf-8")
+
+    live_demo.main(["seed", "--id", "AST-03", "--from-csv", str(export), "--config", str(config)])
+
+    assert "GREEN" in capsys.readouterr().out.upper()
+    store = Store(str(database))
+    readings = store.observations("AST-03")
+    assert len(readings) == 14 * 6 and {o.source for o in readings} == {"wearable"}
+    assert store.latest_assessment("AST-03").level is AlertLevel.GREEN

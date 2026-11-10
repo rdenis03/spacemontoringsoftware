@@ -58,3 +58,16 @@ use = "files"
 crew_path = "examples/crew.jsonl"
 observations_path = "examples/observations.jsonl"
 events_path = "examples/context_events.jsonl"
+
+# A real watch or ring export (M3, task B11). Uncomment and adjust; the astronaut
+# must already be in the crew. `python -m orbit modules` lists the source.
+# [[sources]]
+# use = "wearable_csv"
+# path = "data/watch_export.csv"          # one row per night
+# astronaut_id = "AST-03"                 # for files without an astronaut_id column
+# timestamp_column = "date"
+# timezone = "Europe/Bucharest"           # for dates and times without a timezone
+# device_id = "ring-01"
+# suspect_column = "Low wear time"        # rows flagged by the device become "suspect"
+# columns = { "Resting HR" = "resting_hr", "HRV" = "hrv_rmssd", "Skin Temp" = "skin_temp", "Respiratory Rate" = "resp_rate", "SpO2" = "spo2", "Total Sleep" = "sleep_duration", "Sleep Efficiency" = "sleep_efficiency" }
+# units = { skin_temp = "degF", spo2 = "fraction", sleep_efficiency = "fraction", sleep_duration = "min" }

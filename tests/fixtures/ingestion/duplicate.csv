@@ -1,0 +1,4 @@
+astronaut_id,date,resting_hr,resp_rate
+AST-01,2027-03-14T06:00:00Z,52,14.2
+AST-01,2027-03-14T06:00:00Z,54,
+AST-02,2027-03-14T06:00:00Z,60,15.1
