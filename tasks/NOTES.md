@@ -151,3 +151,16 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - Starter, 180 d x 4 crew x seeds 1-5 (~13 s): sensitivity 1.00 ± 0.00 (39/39), lead 0.6 ± 0.4 whole days (19 on symptom day, 15 one day early, 5 two days), 0 false alarms, confounder alert rate 0.06 ± 0.06. Numbers in README *Results*.
 - Confounder alert rate is not 0 only because look-alike windows overlap illness alerts; the starter never alerted outside an illness (alert episodes = illnesses in every seed).
 - B10: rerun the README command with the learned config on held-out seeds 101-105.
+
+## B08 · Learned scorer module (placeholder weights)
+
+- Scorer `learned` in `orbit/modules/scorer_learned.py`: `LearnedScorer(weights_path=None)`; default `DEFAULT_WEIGHTS` = `orbit/learning/weights.json`. `orbit.toml` still uses `rule_based`; `experiments/learned.toml` uses `learned`.
+- Weights file: `{"version", "scale", "weights": {feature: weight}, "trained_on", "notes"?}`. Keys must be in `FEATURE_NAMES`, weights numbers >= 0, scale >= 0, else `ValueError`. Missing features weigh 0. B09 overwrites this file in the same format.
+- `load_weights(path) -> (version, scale, weights)` validates a file; `LearnedScorer.contributors(features) -> list[Contributor]` scores features without a context.
+- Points = scale x weight x value; features with the same `signal` (or `event_id`) are one reason, label of the first that earns points. Each reason rounded to 0.1; score = min(100, round(sum, 1)), so reasons add up before the cap.
+- `model_version = f"learned-{version}"`, cut to 32 characters: keep versions short.
+- Placeholder weights (`placeholder-1`) mirror rule_based; `vitals_moving` is 0. Events weigh 2.5 per severity rank, so a moderate event is 5 points (rule_based: 3).
+- Learned demo: AST-01 yellow day 89, orange 70.9 day 90 (rule_based 70.2); AST-02 green.
+- Import cycle: `orbit.learning.features` imports `orbit.modules.scorer`, which loads every module. `scorer_learned.py` imports B07's features inside functions; never import `orbit.learning` at the top of a file in `orbit/modules/`.
+- `pyproject.toml` ships `learning/*.json` as package data (checked: the wheel contains `orbit/learning/weights.json`).
+- B10: `python -m orbit.evaluation --config orbit.toml --config experiments/learned.toml` already runs.

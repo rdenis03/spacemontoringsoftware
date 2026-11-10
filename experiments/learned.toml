@@ -1,0 +1,55 @@
+# ORBIT experiment: the learned scorer (M8, task B08).
+# A copy of orbit.toml with [modules.scorer] use = "learned". orbit.toml keeps the
+# starter (rule_based) until B10 compares the two and the team agrees to switch.
+# Run:      python -m orbit --config experiments/learned.toml demo
+# Compare:  python -m orbit.evaluation --config orbit.toml --config experiments/learned.toml
+# Paths are relative to THIS file, so "../" points at the project root.
+
+[mission]
+name = "ORBIT demo mission (learned scorer)"
+# The daily assessment runs after the night's wearable data and the morning check-in.
+assessment_hour_utc = 10
+
+[storage]
+# Its own database, so the normal data/orbit.db stays clean.
+database = "../data/learned.db"
+
+[pipeline]
+baseline_window_days = 14   # days of history that define "your normal"
+recent_days = 3             # days compared against that normal
+event_lookback_days = 7     # how far back stress events count
+
+[comms]                     # M13
+one_way_delay_minutes = 20
+
+# ---- Module slots ---------------------------------------------------------
+
+[modules.baseline]          # M6
+use = "rolling_median"
+min_samples = 5
+
+[modules.detector]          # M7
+use = "robust_z"
+threshold = 2.5
+drift_threshold = 1.5
+drift_days = 2
+
+[modules.scorer]            # M8
+use = "learned"
+# weights_path = "../orbit/learning/weights.json"   # default: the shipped weights (B09 retrains them)
+
+[modules.actions]           # M10
+use = "protocol"
+cards_path = "../cards/action_cards.jsonl"
+max_cards = 3
+
+[modules.sync]              # M13
+use = "consent_gate"
+
+# ---- Data sources -----------------------------------------------------------
+
+[[sources]]
+use = "files"
+crew_path = "../examples/crew.jsonl"
+observations_path = "../examples/observations.jsonl"
+events_path = "../examples/context_events.jsonl"
