@@ -480,6 +480,10 @@ test in `tests/test_store.py`. Never let modules import the store.
 
 ## M5: Space weather feed (NASA DONKI)
 
+**Not planned for this version.** Its task (B12) was dropped. The design below
+stays for later; until then, solar events come from the simulator (M2) and the
+example data.
+
 **Owner files:** `orbit/modules/space_weather.py`, `tests/test_space_weather.py`,
 `tests/fixtures/donki/*.json` (recorded responses).
 **Slot:** `source`, registered as `donki`.
@@ -632,8 +636,8 @@ warns, how often it raises false alarms, and which module version is better.
 
 **CLI:**
 ```bash
-python -m orbit.evaluation --config orbit.toml --config experiments/cusum.toml \
-    --days 180 --crew 4 --seeds 1 2 3 4 5 --out reports/evaluation.json
+python -m orbit.evaluation --config orbit.toml --config experiments/<other>.toml \
+    --days 180 --crew 4 --seeds 1 2 3 4 5 --out data/reports/evaluation.json
 ```
 For each config and seed: build the simulator with these options (they
 override the config's sources), run `Pipeline.from_settings(settings,

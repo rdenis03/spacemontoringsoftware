@@ -1,6 +1,6 @@
 """Command line for the evaluation (M9)::
 
-    python -m orbit.evaluation --config orbit.toml --config experiments/cusum.toml \\
+    python -m orbit.evaluation --config orbit.toml --config experiments/<other>.toml \\
         --days 180 --crew 4 --seeds 1 2 3 4 5 --out data/reports/evaluation.json
 
 Options: ``--config`` (repeatable; default orbit.toml), ``--days`` (180),

@@ -16,9 +16,10 @@ celălalt.
 
 - Specificațiile detaliate ale fiecărui modul (fișiere, opțiuni, cerințe, când
   e gata) sunt în [SPEC.md](SPEC.md), Partea 3.
-- Munca de backend e împărțită în 22 de sarcini mici, câte una pentru fiecare
+- Munca de backend e împărțită în 19 sarcini mici, câte una pentru fiecare
   agent AI, în [tasks/](tasks/README.md). Acolo sunt ordinea, dependențele și ce
-  poate rula în paralel.
+  poate rula în paralel. B12 (furtuni solare NASA DONKI), B21 (baseline EWMA) și
+  B22 (detector CUSUM) au fost scoase din plan.
 - Brief-ul pentru frontend este documentul *ORBIT Frontend Architecture*
   (ecrane, endpoint-uri, ce merge deja și ce vine).
 - Deciziile de design sunt în [ARCHITECTURE.md](ARCHITECTURE.md).
@@ -33,8 +34,7 @@ celălalt.
 | 2 | **B13–B18 API pentru frontend** | Replay pe zile trecute, consimțământ, crew view (`?view=shared`), outbox cu întârziere, raport spre Pământ, trimitere automată pe orange/red | Mediu |
 | 3 | **B05–B06 Evaluare (M9)** | Lead time, sensibilitate, alarme false pe 30 de zile | Mediu |
 | 4 | **B07–B10 Scorer AI (M8)** | Scorer învățat pe misiuni simulate, explicabil, comparat cu starter-ul prin M9 | Mediu |
-| 5 | **B11, B12, B19, B20** | Import CSV de la wearable-uri, furtuni solare NASA DONKI, carduri de acțiune v2, unealta pentru demo-ul live | Mic–mediu |
-| 6 | *(opțional)* **B21, B22** | Baseline EWMA, detector CUSUM | Mic |
+| 5 | **B11, B19, B20** | Import CSV de la wearable-uri, carduri de acțiune v2, unealta pentru demo-ul live | Mic–mediu |
 
 Sarcinile B13 (replay) și B20 (demo live) sunt în primul val, pentru că B are
 nevoie de ele devreme. Ordinea exactă e în `tasks/README.md`.

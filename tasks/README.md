@@ -1,7 +1,9 @@
 # Backend tasks
 
-The ORBIT backend, cut into 22 small jobs. Each file in this folder is one job
+The ORBIT backend, cut into 19 small jobs. Each file in this folder is one job
 for one AI agent (or one person): one branch, one pull request, one test file.
+B12 (NASA space weather feed), B21 (EWMA baseline) and B22 (CUSUM detector)
+were dropped from the plan; their numbers are not reused.
 
 - **Full module specs:** [SPEC.md](../SPEC.md), Part 3. Tasks point to it
   instead of repeating it.
@@ -77,7 +79,6 @@ every API task edits `orbit/api/app.py`.
 | [ ] | [B09](B09-train-scorer.md) | Train the scorer on simulated missions | AI | B04, B07, B08 | M |
 | [ ] | [B10](B10-compare-and-switch.md) | Compare learned vs starter, then switch | AI | B06, B08, B09 | S |
 | [ ] | [B11](B11-wearable-import.md) | Wearable CSV import | Data | none | M |
-| [ ] | [B12](B12-space-weather.md) | NASA space weather feed | Data | none | M |
 | [x] | [B13](B13-api-past-day.md) | Past-day endpoint for replay | API | none | S |
 | [x] | [B14](B14-api-consent.md) | Consent editing endpoint | API | B13 (order only) | S |
 | [x] | [B15](B15-api-shared-status.md) | Shared status for the crew view | API | B14 (order only) | S |
@@ -86,8 +87,6 @@ every API task edits `orbit/api/app.py`.
 | [ ] | [B18](B18-auto-send.md) | Auto-send on orange or red | API | B17 | S |
 | [x] | [B19](B19-action-cards.md) | Action cards v2 | Crew guidance | none | S |
 | [x] | [B20](B20-live-demo-tool.md) | Live body demo tool | Demo | none | S |
-| [ ] | [B21](B21-ewma-baseline.md) | EWMA baseline (stretch) | Analytics | none | S |
-| [ ] | [B22](B22-cusum-detector.md) | CUSUM detector (stretch) | Analytics | none | S |
 
 S = one short agent session. M = a longer one, or two.
 "Order only" means the task does not use the earlier one; it waits so the two
@@ -97,13 +96,12 @@ do not edit `orbit/api/app.py` at the same time.
 
 | Wave | Start these together |
 |---|---|
-| 1 | B01, B07, B11, B12, B13, B19, B20 |
+| 1 | B01, B07, B11, B13, B19, B20 |
 | 2 | B02, B05, B08, B14 |
 | 3 | B03, B15 |
 | 4 | B04, B16 |
 | 5 | B06, B09, B17 |
 | 6 | B10, B18 |
-| Any time | B21, B22 |
 
 ## Order for one person
 
@@ -111,7 +109,7 @@ Every task comes after the tasks it needs, and the endpoints the frontend
 waits for come early:
 
 B01 → B13 → B02 → B07 → B03 → B14 → B04 → B05 → B15 → B20 → B06 → B08 →
-B16 → B09 → B17 → B10 → B18 → B19 → B11 → B12 → B21 → B22
+B16 → B09 → B17 → B10 → B18 → B19 → B11
 
 **Critical path:** B01 → B02 → B03 → B04 → B09 → B10. The simulator is the
 long pole. If it runs late, B09 can first train on B03's output (illness only,
@@ -124,7 +122,7 @@ These are the exceptions:
 
 | File | Touched by | Rule |
 |---|---|---|
-| `orbit/modules/__init__.py` | B02, B08, B11, B12, B21, B22 | One import line per task. Merge conflicts here are one line: keep both. |
+| `orbit/modules/__init__.py` | B02, B08, B11 | One import line per task. Merge conflicts here are one line: keep both. |
 | `orbit.toml` | B10 (scorer), B11 (a commented-out source example), B16 and B18 (`[comms]`), B19 (`cards_path`) | Change only your block. Starters stay active until B10. |
 | `pyproject.toml` | B08 (package data), B09 (`[train]` extra) | In a separate commit. |
 | `orbit/schema/__init__.py` | B01 | Add exports only. |
@@ -135,8 +133,6 @@ These are the exceptions:
 
 ## Steps an agent cannot do
 
-- **B12:** record one real response per DONKI endpoint, with internet access
-  and an API key, and save it under `tests/fixtures/donki/`.
 - **B20:** the wearer's real resting values, or a watch export.
 - **B10:** if the learned scorer changes the demo story, the team agrees on
   the new one before it merges.
