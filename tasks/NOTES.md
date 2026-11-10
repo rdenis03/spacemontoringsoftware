@@ -34,3 +34,16 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - `scenarios`, `illness_rate`, `confounders`, `faults`, `labels_path` are stored on `self`, unused so far.
 - Config paths resolve relative to the config file: `experiments/sim180.toml` uses `../data/...` and `../examples/...`.
 - Healthy 180-day run with the starters: 720 assessments, all green.
+
+## B07 · Feature extraction for the AI scorer
+
+- Import from `orbit.learning`: `FEATURE_NAMES`, `Feature`, `extract`, `vector`.
+- `extract(ctx, anomalies) -> list[Feature]`: non-zero features only, in `FEATURE_NAMES` order; pure and deterministic.
+- `vector(features) -> dict[str, float]`: every `FEATURE_NAMES` key in order, zeros filled; unknown names raise `ValueError`.
+- `Feature(name, value, label, signal=None, event_id=None)`, frozen. B08: `Contributor(label=f.label, points=w * f.value, signal=f.signal, event_id=f.event_id)`.
+- `FEATURE_NAMES` (42): `dev:*` x7, `drift:*` x7, `vitals_moving`, `sym:*` x8, `dna:*` x3, `crp:high`, `stress:high`, `mood:low`, `event:*` x8. Append new names at the end only, then retrain (B09).
+- Several anomalies for one signal: the most deviant is kept. `vitals_moving` counts the 5 vital signals only (not sleep), and only when 2 or more.
+- `event:<type>` value is severity rank 1-4 (low..extreme), not rule_based's 1/3/6/10 points; per type the most severe event wins, ties to the most recent.
+- Labels match `rule_based` exactly; `features.py` imports the private `_days_label` from `orbit/modules/scorer.py`, so do not rename it.
+- Constants `MAX_DEVIATION=3`, `VIRAL_DETECTION_LIMIT=100`, `CRP_LIMIT=10` live in `features.py`, copied from rule_based defaults, not linked to them.
+- AST-01 day 90 gives 16 features; AST-02 day 90 has no `dev:*` or `sym:*`.

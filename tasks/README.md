@@ -72,7 +72,7 @@ every API task edits `orbit/api/app.py`.
 | [ ] | [B04](B04-simulator-lookalikes.md) | Simulator v3: look-alikes and sensor faults | Simulator | B03 | M |
 | [ ] | [B05](B05-evaluation-metrics.md) | Evaluation metrics | Evaluation | B01 | S |
 | [ ] | [B06](B06-evaluation-runner.md) | Evaluation runner and CLI | Evaluation | B04, B05 | M |
-| [ ] | [B07](B07-scorer-features.md) | Feature extraction for the AI scorer | AI | none | S |
+| [x] | [B07](B07-scorer-features.md) | Feature extraction for the AI scorer | AI | none | S |
 | [ ] | [B08](B08-learned-scorer.md) | Learned scorer module (placeholder weights) | AI | B07 | S |
 | [ ] | [B09](B09-train-scorer.md) | Train the scorer on simulated missions | AI | B04, B07, B08 | M |
 | [ ] | [B10](B10-compare-and-switch.md) | Compare learned vs starter, then switch | AI | B06, B08, B09 | S |
