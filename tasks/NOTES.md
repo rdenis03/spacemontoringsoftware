@@ -223,3 +223,19 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - Never raises: a failed send is logged on `orbit.api` and does not show in `DayResult.errors`.
 - `GET /api/health` returns `comms.auto_send_level`; `GET /api/outbox` items have `auto: true` for these packets.
 - Checked with a real `serve` on a scratch database: `auto-AST-01-20270403` is queued right after startup, 1200 s left.
+
+## B11 · Wearable CSV import
+
+- Source `wearable_csv` in `orbit/modules/ingestion.py`: `create("source", "wearable_csv", path=, astronaut_id=, timestamp_column="date", timezone=, columns=, units=, device_id=, suspect_column=)`. `source_name` is `wearable_csv:<file name>`; readings have `source="wearable"`.
+- `normalize_records(records, *, astronaut_id=, timestamp_column=, timezone=, columns=, units=, device_id=, suspect_column=, first_row=1) -> ParseResult[Observation]` does the same for rows in memory. The API was not changed.
+- Wide CSV, one row per night. Columns named exactly like a signal (`resting_hr`) are read without `columns`; that is how `tools/live_demo.py --from-csv` works, since it passes only `path` and `astronaut_id`.
+- Only wearable signals (5 vitals, 2 sleep). `columns` keys match the header exactly or ignoring case; other columns are ignored.
+- Units: without an entry in `units` a column is taken to be in the signal's own unit. Conversions: `degF`, `fraction` (spo2, sleep_efficiency), `min` and `s` (sleep_duration). Anything else is an error and the column is not read. A fraction SpO2 without `units` is stored as `bad`, not converted.
+- A column whose name (or unit) contains "deviation" is rejected when mapped; unmapped it is just ignored.
+- Error rows: 0 = file or timezone problem, 1 = the header (mapping, units), data starts at row 2.
+- Timestamps: ISO date or date-time. A date alone is 06:00 local (a choice, not in SPEC). No timezone in the file and no `timezone` option: every row is an error.
+- Quality: out of plausible range -> `bad` with the raw value in `note`; `suspect_column` (added option, not in SPEC) flags rows where it is 1, true, yes, y or low as `suspect`; duplicates keep the last row; empty cells are skipped.
+- IDs `f"{astronaut}-{signal}-{yyyymmddThhmmss}"` in UTC: importing the file again replaces. The source creates no crew; unknown astronauts are rejected by `Pipeline.ingest`.
+- `orbit.toml` has a commented-out `[[sources]] use = "wearable_csv"` example.
+- `tests/test_live_demo.py` (B20) changed with the team's agreement: the test that expected `--from-csv` to be refused now imports a CSV into a temporary database. Before the fix it ran `seed` on the real `data/orbit.db` once and left a crew member AST-03 there (local, git-ignored; `python -m orbit reset` clears it).
+- IANA timezones need the `tzdata` package on Windows; pandas installs it.
