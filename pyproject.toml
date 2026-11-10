@@ -21,5 +21,8 @@ dev = ["pytest>=8", "httpx>=0.27"]
 [tool.setuptools.packages.find]
 include = ["orbit*"]
 
+[tool.setuptools.package-data]
+orbit = ["learning/*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
