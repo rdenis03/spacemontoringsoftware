@@ -1,0 +1,77 @@
+/*
+ * ORBIT design tokens.
+ *
+ * Colours are named by role, not by hue. Dark is the default (dim cabin);
+ * light follows the system setting. There is no in-app appearance switch.
+ * Contrast figures are WCAG ratios against --raised (cards):
+ *   content 13.4 / 17.9, secondary 6.7 / 7.3, accent 7.8 / 6.1,
+ *   level colours >= 6.4 (dark) and >= 5.3 (light).
+ *
+ * One colour, one meaning: level colours only ever mean alert level,
+ * accent only ever means "you can press this".
+ */
+
+:root {
+  --surface: #0e1621;
+  --raised: #172230;
+  --raised-2: #1f2c3c;
+  --content: #e6ebf0;
+  --secondary: #9da9b6;
+  --separator: #2c3a4b;
+  --accent: #7cb8ff;
+  --accent-ink: #0e1621; /* text on an accent fill */
+  --band: #2a3a4d; /* "your normal" fill */
+  --band-edge: #6d7d8f;
+
+  --level-green: #4cc38a;
+  --level-yellow: #f0c64a;
+  --level-orange: #ff9f4a;
+  --level-red: #ff7a7a;
+
+  /* Type scale (rem, so browser text size and zoom scale everything). */
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-data: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+  --text-level: 2.125rem; /* 34 */
+  --text-title: 1.375rem; /* 22 */
+  --text-body: 1.0625rem; /* 17 */
+  --text-secondary: 0.9375rem; /* 15 */
+  --text-min: 0.8125rem; /* 13, axes and fine print only */
+
+  --radius: 14px;
+  --radius-small: 8px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --target: 44px; /* minimum touch target */
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --surface: #f3f5f8;
+    --raised: #ffffff;
+    --raised-2: #eef2f6;
+    --content: #101820;
+    --secondary: #4c5866;
+    --separator: #d5dde6;
+    --accent: #0a5fc2;
+    --accent-ink: #ffffff;
+    --band: #dce4ee;
+    --band-edge: #7b8794;
+
+    --level-green: #1d7a4c;
+    --level-yellow: #7d5f00;
+    --level-orange: #a9480a;
+    --level-red: #b42323;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --secondary: var(--content);
+    --separator: var(--secondary);
+    --band-edge: var(--content);
+  }
+}

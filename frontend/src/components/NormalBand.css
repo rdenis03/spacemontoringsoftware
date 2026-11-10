@@ -1,0 +1,32 @@
+.normal-band {
+  display: block;
+  width: 100%;
+  height: 24px;
+  overflow: visible;
+}
+
+.normal-band__track {
+  stroke: var(--separator);
+  stroke-width: 1;
+}
+
+.normal-band__band {
+  fill: var(--band);
+}
+
+.normal-band__edge {
+  stroke: var(--band-edge);
+  stroke-width: 1;
+}
+
+.normal-band__center {
+  stroke: var(--band-edge);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.normal-band__dot {
+  fill: var(--content);
+  stroke: var(--raised);
+  stroke-width: 1;
+}

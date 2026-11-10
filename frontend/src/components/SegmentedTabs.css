@@ -1,0 +1,29 @@
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--raised);
+  border-radius: calc(var(--radius-small) + 3px);
+}
+
+.segmented__tab {
+  min-height: var(--target);
+  min-width: 96px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: var(--secondary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented__tab:hover {
+  color: var(--content);
+}
+
+.segmented__tab[aria-selected="true"] {
+  background: var(--raised-2);
+  color: var(--content);
+  box-shadow: inset 0 0 0 1px var(--separator);
+}
