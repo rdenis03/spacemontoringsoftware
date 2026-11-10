@@ -32,8 +32,12 @@ drift_days = 2
 use = "rule_based"
 
 [modules.actions]           # M10
-use = "card_library"
-cards_path = "examples/action_cards.jsonl"
+use = "protocol"            # ranks cards by how much of the score they explain
+cards_path = "cards/action_cards.jsonl"   # hand-written library, checked on load
+max_cards = 3
+# Starter, kept as fallback:
+# use = "card_library"
+# cards_path = "examples/action_cards.jsonl"
 
 [modules.sync]              # M13
 use = "consent_gate"

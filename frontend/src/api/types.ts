@@ -23,6 +23,9 @@ export type Baseline = Schemas["Baseline"];
 export type Observation = Schemas["Observation"];
 export type ContextEvent = Schemas["ContextEvent"];
 export type CrewMember = Schemas["CrewMember"];
+export type CheckIn = Schemas["CheckIn"];
+export type ValidationError = Schemas["ValidationError"];
+export type OverviewRow = Schemas["OverviewRow"];
 
 /** Mirrors `registry_document()` in orbit/schema/export.py. */
 export interface SignalSpec {

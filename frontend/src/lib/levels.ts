@@ -28,9 +28,19 @@ export function levelRank(level: string, order: string[]): number {
   return order.indexOf(level);
 }
 
-/** CSS colour token for a level. Level colours mean alert level and nothing else. */
+/** Mark colour for a level (icon fills, chart points, bands). Level colours mean state and nothing else. */
 export function levelColor(level: string): string {
-  return `var(--level-${level}, var(--secondary))`;
+  return `var(--level-${level}, var(--color-neutral-500))`;
+}
+
+/** Text colour for a level (words next to a mark). */
+export function levelInk(level: string): string {
+  return `var(--level-${level}-ink, var(--color-neutral-700))`;
+}
+
+/** A level colour mixed into transparency, for zone and band fills. */
+export function levelTint(level: string, percent: number): string {
+  return `color-mix(in srgb, ${levelColor(level)} ${percent}%, transparent)`;
 }
 
 /** Score bands for charts: [from, to) per level, ending at 100. */

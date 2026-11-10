@@ -4,10 +4,12 @@
  */
 import type {
   Baseline,
+  CheckIn,
   ContextEvent,
   CrewMember,
   DayResult,
   Observation,
+  OverviewRow,
   RiskAssessment,
   SignalRegistry,
 } from "./types";
@@ -31,6 +33,29 @@ export function isNetworkError(error: unknown): boolean {
   return error instanceof TypeError;
 }
 
+/**
+ * Plain-language messages from an API error. FastAPI sends either a string,
+ * a list of strings (our 422s) or a list of {loc, msg} validation errors.
+ */
+export function errorMessages(error: unknown): string[] {
+  if (!(error instanceof ApiError)) return [error instanceof Error ? error.message : String(error)];
+  const { detail } = error;
+  if (typeof detail === "string") return [detail];
+  if (Array.isArray(detail)) {
+    return detail.map((item) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object" && "msg" in item) {
+        const loc = Array.isArray((item as { loc?: unknown }).loc)
+          ? ((item as { loc: (string | number)[] }).loc.filter((p) => p !== "body").join(" › "))
+          : "";
+        return loc ? `${loc}: ${(item as { msg: string }).msg}` : (item as { msg: string }).msg;
+      }
+      return JSON.stringify(item);
+    });
+  }
+  return [error.message];
+}
+
 type Query = Record<string, string | string[] | undefined>;
 
 function buildUrl(path: string, query?: Query): string {
@@ -42,10 +67,11 @@ function buildUrl(path: string, query?: Query): string {
   return url.toString();
 }
 
-async function request<T>(path: string, init?: RequestInit & { query?: Query }): Promise<T> {
-  const response = await fetch(buildUrl(path, init?.query), {
-    ...init,
-    headers: { Accept: "application/json", ...(init?.body ? { "Content-Type": "application/json" } : {}) },
+async function request<T>(path: string, init: RequestInit & { query?: Query } = {}): Promise<T> {
+  const { query, ...fetchInit } = init;
+  const response = await fetch(buildUrl(path, query), {
+    ...fetchInit,
+    headers: { Accept: "application/json", ...(fetchInit.body ? { "Content-Type": "application/json" } : {}) },
   });
   if (!response.ok) {
     let detail: unknown = null;
@@ -67,6 +93,9 @@ export const api = {
 
   crew: (signal?: AbortSignal) => request<CrewMember[]>("/api/crew", { signal }),
 
+  /** Latest level and score per astronaut (crew view). */
+  overview: (signal?: AbortSignal) => request<OverviewRow[]>("/api/overview", { signal }),
+
   status: (id: string, signal?: AbortSignal) => request<DayResult>(`${crewPath(id)}/status`, { signal }),
 
   /** Readings; an empty `signals` list means every signal. */
@@ -78,6 +107,10 @@ export const api = {
 
   assessments: (id: string, signal?: AbortSignal) =>
     request<RiskAssessment[]>(`${crewPath(id)}/assessments`, { signal }),
+
+  /** Saves the daily check-in and re-assesses at once; 422 lists what is wrong. */
+  checkin: (id: string, body: CheckIn, signal?: AbortSignal) =>
+    request<DayResult>(`${crewPath(id)}/checkin`, { method: "POST", body: JSON.stringify(body), signal }),
 
   events: (astronautId: string, signal?: AbortSignal) =>
     request<ContextEvent[]>("/api/events", { signal, query: { astronaut_id: astronautId } }),

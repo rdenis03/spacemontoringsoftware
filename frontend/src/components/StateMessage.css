@@ -10,6 +10,7 @@
   justify-items: center;
   background: var(--raised);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
 }
 
 .state-message__title {
@@ -17,8 +18,10 @@
   font-weight: 600;
 }
 
+/* Fluent MessageBar (warning) */
 .partial-note {
-  border: 1px solid var(--separator);
+  border: 1px solid color-mix(in srgb, var(--level-orange) 40%, transparent);
+  background: color-mix(in srgb, var(--level-orange) 8%, var(--raised));
   border-radius: var(--radius-small);
   padding: var(--space-3) var(--space-4);
   color: var(--secondary);

@@ -1,13 +1,13 @@
-import { levelColor, levelCopy } from "../lib/levels";
+import { levelCopy, levelInk } from "../lib/levels";
 import { LevelIcon } from "./LevelIcon";
 import "./LevelTag.css";
 
-/** Small inline level: icon + word, coloured. Never colour alone. */
-export function LevelTag({ level }: { level: string }) {
+/** Inline level: shape mark + word in the level's text colour. Never colour alone. */
+export function LevelTag({ level, label }: { level: string; label?: string }) {
   return (
-    <span className="level-tag" style={{ color: levelColor(level) }}>
-      <LevelIcon level={level} size={14} />
-      {levelCopy(level).word}
+    <span className="level-tag" style={{ color: levelInk(level) }}>
+      <LevelIcon level={level} size={10} />
+      {label ?? levelCopy(level).word}
     </span>
   );
 }

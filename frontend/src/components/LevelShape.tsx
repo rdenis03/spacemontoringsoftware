@@ -1,7 +1,9 @@
+import { shapePath } from "../lib/shapes";
+
 /**
- * Level-shaped chart dot, so a mark reads without colour. Same shapes as
- * LevelIcon: green circle, yellow diamond, orange triangle, red octagon.
- * `level` null draws a small neutral dot (no personal normal yet).
+ * Recharts dot renderer in the level's shape (see lib/shapes.ts), so chart
+ * points read without colour. `level` null draws a small neutral dot (no
+ * personal normal).
  */
 export function LevelDot({
   cx,
@@ -10,7 +12,7 @@ export function LevelDot({
   level,
   stroke,
   neutral,
-  r = 6,
+  r = 4.5,
 }: {
   cx?: number;
   cy?: number;
@@ -21,23 +23,6 @@ export function LevelDot({
   r?: number;
 }) {
   if (cx === undefined || cy === undefined) return null;
-  let d: string;
-  switch (level) {
-    case "yellow":
-      d = `M${cx} ${cy - r} L${cx + r} ${cy} L${cx} ${cy + r} L${cx - r} ${cy}Z`;
-      break;
-    case "orange":
-      d = `M${cx} ${cy - r} L${cx + r} ${cy + r * 0.8} L${cx - r} ${cy + r * 0.8}Z`;
-      break;
-    case "red": {
-      const a = r * 0.42;
-      d = `M${cx - a} ${cy - r} L${cx + a} ${cy - r} L${cx + r} ${cy - a} L${cx + r} ${cy + a} L${cx + a} ${cy + r} L${cx - a} ${cy + r} L${cx - r} ${cy + a} L${cx - r} ${cy - a}Z`;
-      break;
-    }
-    case "green":
-      return <circle cx={cx} cy={cy} r={r - 1} fill={color} stroke={stroke} strokeWidth={1.5} />;
-    default:
-      return <circle cx={cx} cy={cy} r={3} fill={neutral ?? stroke} />;
-  }
-  return <path d={d} fill={color} stroke={stroke} strokeWidth={1.5} />;
+  if (!level) return <circle cx={cx} cy={cy} r={3} fill={neutral ?? stroke} />;
+  return <path d={shapePath(level, cx, cy, r)} fill={color} stroke={stroke} strokeWidth={1.5} />;
 }

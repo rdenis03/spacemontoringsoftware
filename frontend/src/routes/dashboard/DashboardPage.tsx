@@ -2,14 +2,15 @@
  * M12 astronaut dashboard: "Am I OK? Why? What do I do?" at a glance,
  * with trends and history for anyone who wants the detail.
  *
- * Data: GET /status (polled every 60 s), plus /observations, /baselines,
- * /events and /assessments for the Trends and History tabs.
+ * Data: the status (DayResult) comes from the app shell, which polls
+ * GET /status every 60 s; Trends and History fetch /observations,
+ * /baselines, /events and /assessments and refresh with each new result.
  */
 import { useSearchParams } from "react-router-dom";
-import { api } from "../../api/client";
+import type { DayResult } from "../../api/types";
+import { Frame } from "../../components/Frame";
 import { SegmentedTabs } from "../../components/SegmentedTabs";
-import { formatMissionTime } from "../../lib/format";
-import { useAsync } from "../../lib/useAsync";
+import type { AsyncState } from "../../lib/useAsync";
 import { useRegistry } from "../../state/registry-context";
 import History from "./History";
 import Today from "./Today";
@@ -23,18 +24,11 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
-const POLL_MS = 60_000;
-
-export default function DashboardPage({ astronautId }: { astronautId: string }) {
+export default function DashboardPage({ astronautId, status }: { astronautId: string; status: AsyncState<DayResult> }) {
   const { member } = useRegistry();
   const astronaut = member(astronautId);
   const [params, setParams] = useSearchParams();
   const tab: Tab = TABS.some((t) => t.id === params.get("tab")) ? (params.get("tab") as Tab) : "today";
-
-  const status = useAsync((signal) => api.status(astronautId, signal), [astronautId], {
-    pollMs: POLL_MS,
-    enabled: Boolean(astronautId),
-  });
 
   const setTab = (next: Tab) =>
     setParams(
@@ -48,27 +42,29 @@ export default function DashboardPage({ astronautId }: { astronautId: string }) 
 
   // Trends and History refetch when a new assessment arrives.
   const freshness = status.data?.as_of ?? "";
+  const callsign = astronaut?.callsign ?? astronautId;
 
   return (
     <div className="dashboard">
-      <div className="dashboard__head">
-        <div>
-          <h1 className="dashboard__name">
-            {astronaut?.callsign ?? astronautId}
-            <span className="secondary dashboard__role"> {astronaut?.role}</span>
-          </h1>
-          {status.data && (
-            <p className="secondary">
-              Mission day <span className="data">{status.data.mission_day}</span> ·{" "}
-              <span className="data">{formatMissionTime(status.data.as_of)}</span>
+      <div className="page-head">
+        <div className="identity">
+          <Frame as="div" className="identity__mark" aria-hidden="true">
+            {callsign.charAt(0)}
+          </Frame>
+          <div className="identity__text">
+            <p className="identity__meta">
+              <span>{astronaut?.role}</span>
+              <span className="data">{astronautId}</span>
+              {status.data && <span className="data">Mission day {status.data.mission_day}</span>}
             </p>
-          )}
+            <h1 className="identity__name">{callsign}</h1>
+          </div>
         </div>
         <SegmentedTabs label="Dashboard views" tabs={TABS} current={tab} onChange={setTab} idPrefix="dash" />
       </div>
 
-      <div role="tabpanel" id={`dash-panel-${tab}`} aria-labelledby={`dash-tab-${tab}`}>
-        {tab === "today" && <Today status={status} />}
+      <div role="tabpanel" id={`dash-panel-${tab}`} aria-labelledby={`dash-tab-${tab}`} className="enter" key={tab}>
+        {tab === "today" && <Today status={status} astronautId={astronautId} freshness={freshness} />}
         {tab === "trends" && <Trends astronautId={astronautId} status={status.data} freshness={freshness} />}
         {tab === "history" && <History astronautId={astronautId} freshness={freshness} />}
       </div>

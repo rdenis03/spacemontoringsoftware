@@ -1,32 +1,39 @@
 .normal-band {
-  display: block;
-  width: 100%;
-  height: 24px;
-  overflow: visible;
+  position: relative;
+  height: 20px;
 }
 
 .normal-band__track {
-  stroke: var(--separator);
-  stroke-width: 1;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 9px;
+  height: 1px;
+  background: var(--color-neutral-400);
 }
 
 .normal-band__band {
-  fill: var(--band);
-}
-
-.normal-band__edge {
-  stroke: var(--band-edge);
-  stroke-width: 1;
+  position: absolute;
+  top: 3px;
+  height: 14px;
+  background: var(--band);
+  border-left: 1px solid var(--band-edge);
+  border-right: 1px solid var(--band-edge);
 }
 
 .normal-band__center {
-  stroke: var(--band-edge);
-  stroke-width: 1;
-  stroke-dasharray: 2 2;
+  position: absolute;
+  top: 6px;
+  height: 8px;
+  width: 1px;
+  background: var(--band-center);
 }
 
 .normal-band__dot {
-  fill: var(--content);
-  stroke: var(--raised);
-  stroke-width: 1;
+  position: absolute;
+  top: 3px;
+  width: 6px;
+  height: 14px;
+  margin-left: -3px;
+  outline: 2px solid var(--color-bg);
 }

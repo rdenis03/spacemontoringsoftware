@@ -24,7 +24,7 @@ export function LoadError({ error, retry, what }: { error: unknown; retry?: () =
       <p className="state-message__title">{title}</p>
       <p className="secondary">{hint}</p>
       {retry && (
-        <button type="button" className="button" onClick={retry}>
+        <button type="button" className="btn btn-secondary" onClick={retry}>
           Try again
         </button>
       )}

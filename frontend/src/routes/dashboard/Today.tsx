@@ -1,15 +1,35 @@
+/**
+ * Today (design variant C, "Instrument"): a status column with a vertical
+ * score meter, the contributors as framed cards, and the action cards.
+ */
 import { useState } from "react";
-import type { ActionCard, Anomaly, Contributor, DayResult } from "../../api/types";
+import { api } from "../../api/client";
+import type { ActionCard, Anomaly, Contributor, DayResult, RiskAssessment } from "../../api/types";
+import { Frame } from "../../components/Frame";
 import { LevelIcon } from "../../components/LevelIcon";
 import { LevelTag } from "../../components/LevelTag";
 import { NormalBand } from "../../components/NormalBand";
 import { LoadError, Loading, PartialNote } from "../../components/StateMessage";
-import { formatMissionTime, formatNumber, humanize, signedNumber, withUnit } from "../../lib/format";
-import { levelColor, levelCopy, levelForScore } from "../../lib/levels";
+import { formatClock, formatNumber, formatValue, humanize, signedNumber, withUnit } from "../../lib/format";
+import { levelBands, levelColor, levelCopy, levelForScore, levelInk } from "../../lib/levels";
 import type { AsyncState } from "../../lib/useAsync";
+import { useAsync } from "../../lib/useAsync";
 import { useRegistry } from "../../state/registry-context";
 
-export default function Today({ status }: { status: AsyncState<DayResult> }) {
+export default function Today({
+  status,
+  astronautId,
+  freshness,
+}: {
+  status: AsyncState<DayResult>;
+  astronautId: string;
+  freshness: string;
+}) {
+  // The previous assessment gives "change vs yesterday".
+  const history = useAsync((signal) => api.assessments(astronautId, signal), [astronautId, freshness], {
+    enabled: Boolean(astronautId),
+  });
+
   if (status.error) return <LoadError error={status.error} retry={status.reload} what="assessment" />;
   if (!status.data) return <Loading what="today's status" />;
 
@@ -23,63 +43,90 @@ export default function Today({ status }: { status: AsyncState<DayResult> }) {
       </div>
     );
   }
+  const previous = previousAssessment(history.data, assessment.assessed_at);
 
   return (
     <div className="today">
-      <StatusTile result={result} />
-      <ActionsPanel key={`${result.astronaut_id}-${result.as_of}`} cards={result.actions ?? []} />
-      <WhyPanel contributors={assessment.contributors ?? []} anomalies={result.anomalies ?? []} score={assessment.score} />
-      {(result.errors?.length ?? 0) > 0 && (
-        <div className="today__note">
-          <PartialNote errors={result.errors ?? []} />
-        </div>
-      )}
+      <StatusColumn result={result} previous={previous} />
+      <Contributors contributors={assessment.contributors ?? []} anomalies={result.anomalies ?? []} score={assessment.score} />
+      <div className="today__actions">
+        <ActionsPanel key={`${result.astronaut_id}-${result.as_of}`} cards={result.actions ?? []} />
+        {(result.errors?.length ?? 0) > 0 && <PartialNote errors={result.errors ?? []} />}
+      </div>
     </div>
   );
 }
 
-function StatusTile({ result }: { result: DayResult }) {
+function previousAssessment(all: RiskAssessment[] | undefined, before: string): RiskAssessment | undefined {
+  const t = new Date(before).getTime();
+  return (all ?? [])
+    .filter((a) => new Date(a.assessed_at).getTime() < t)
+    .sort((a, b) => new Date(b.assessed_at).getTime() - new Date(a.assessed_at).getTime())[0];
+}
+
+/* ---- status column ------------------------------------------------------------------ */
+
+function StatusColumn({ result, previous }: { result: DayResult; previous?: RiskAssessment }) {
+  const { registry } = useRegistry();
   const assessment = result.assessment!;
   const level = assessment.level ?? "green";
   const copy = levelCopy(level);
+  const bands = levelBands(registry.alert_levels);
+  const change = previous ? signedNumber(Math.round(assessment.score) - Math.round(previous.score)).replace(/^\+0$/, "±0") : null;
+
   return (
-    <section
-      className="status-tile card"
-      style={{ ["--tile-level" as string]: levelColor(level) }}
-      aria-labelledby="status-heading"
-    >
-      {/* key: the tile fades in again when the level changes */}
-      <div key={level} className="status-tile__level">
-        <LevelIcon level={level} size={44} />
-        <div>
-          <h2 id="status-heading" className="status-tile__word">
-            {copy.word}
-          </h2>
-          <p className="status-tile__meaning">{copy.meaning}</p>
+    <Frame className="status" aria-labelledby="status-heading">
+      <span className="kicker">Today's status</span>
+      <div className="status__body">
+        <div className="vmeter" aria-hidden="true">
+          {bands.map((b) => (
+            <span
+              key={b.level}
+              className="vmeter__band"
+              style={{ flexGrow: b.to - b.from, background: b.level === level ? levelColor(b.level) : undefined }}
+            />
+          ))}
+          <span className="vmeter__marker" style={{ bottom: `${Math.min(100, Math.max(0, assessment.score))}%` }} />
+        </div>
+        <div className="status__text">
+          <div className="status__level" key={level}>
+            <LevelIcon level={level} size={34} />
+            <h2 id="status-heading" className="status__word" style={{ color: levelInk(level) }}>
+              {copy.word}
+            </h2>
+            <span className="status__meaning">{copy.meaning}</span>
+          </div>
+          <div className="status__score">
+            <span className="figure status__figure">{formatNumber(assessment.score, 0)}</span>
+            <span className="secondary">
+              of 100{change ? ` · ${change} vs yesterday` : ""}
+            </span>
+          </div>
         </div>
       </div>
-      <dl className="status-tile__facts">
-        <div>
-          <dt>Score</dt>
-          <dd>
-            <span className="data">{formatNumber(assessment.score, 0)}</span> of 100
-          </dd>
-        </div>
+      <dl className="status__facts">
         <div>
           <dt>Mission day</dt>
           <dd className="data">{result.mission_day}</dd>
         </div>
         <div>
           <dt>Assessed</dt>
-          <dd className="data">{formatMissionTime(assessment.assessed_at)}</dd>
+          <dd className="data">{formatClock(assessment.assessed_at)}</dd>
         </div>
+        {assessment.model_version && (
+          <div>
+            <dt>Model</dt>
+            <dd>{assessment.model_version}</dd>
+          </div>
+        )}
       </dl>
-      {assessment.model_version && <p className="status-tile__model">Scored by {assessment.model_version}</p>}
-    </section>
+    </Frame>
   );
 }
 
-function WhyPanel({
+/* ---- contributors ----------------------------------------------------------------------- */
+
+function Contributors({
   contributors,
   anomalies,
   score,
@@ -94,51 +141,58 @@ function WhyPanel({
   const bySignal = new Map(anomalies.map((a) => [a.signal, a]));
 
   return (
-    <section className="why card" aria-labelledby="why-heading">
-      <h2 id="why-heading" className="section-label">
-        Why
-      </h2>
+    <section className="contributors" aria-labelledby="why-heading">
+      <div className="section-head">
+        <h2 id="why-heading" className="section-label">
+          Contributors
+        </h2>
+        {contributors.length > 0 && (
+          <span className="secondary data">
+            {contributors.length} reason{contributors.length === 1 ? "" : "s"} · {formatNumber(total, 0)} pts
+          </span>
+        )}
+      </div>
       {contributors.length === 0 ? (
         <p className="secondary">Nothing raised your score today.</p>
       ) : (
-        <ul className="why__list">
+        <ul className="contributors__grid">
           {contributors.map((c, i) => {
             const s = spec(c.signal);
             const anomaly = c.signal ? bySignal.get(c.signal) : undefined;
-            const without = Math.min(100, total - c.points);
+            const without = Math.max(0, Math.min(100, total - c.points));
             const withoutLevel = levelForScore(without, registry.alert_levels);
-            const clearsWord = s && (s.category === "symptom" || s.category === "wellbeing") ? "clears" : "returns to your normal";
+            const valueLine =
+              anomaly && s
+                ? `${formatValue(anomaly.value, s)} · ${withUnit(signedNumber(anomaly.value - anomaly.baseline_center), s)} vs normal ${formatNumber(anomaly.baseline_center)}`
+                : s && (s.category === "symptom" || s.category === "wellbeing")
+                  ? "Reported in your check-in"
+                  : s && s.category === "lab"
+                    ? "Onboard lab result"
+                    : c.event_id
+                      ? "Stress event"
+                      : "";
             return (
-              <li key={`${c.label}-${i}`} className="why__item">
-                <div className="why__head">
-                  <span>{c.label}</span>
-                  <span className="data why__points">
-                    {formatNumber(c.points, 1)} pts
-                  </span>
+              <Frame as="li" key={`${c.label}-${i}`} className="contrib">
+                <span className="kicker contrib__label">{c.label}</span>
+                <div className="contrib__pts">
+                  <span className="figure">+{formatNumber(c.points, 1)}</span>
+                  <span className="secondary">pts</span>
                 </div>
-                <div className="why__bar" aria-hidden="true">
+                <div className="contrib__bar" aria-hidden="true">
                   <span style={{ width: `${(c.points / maxPoints) * 100}%` }} />
                 </div>
                 {anomaly && s && (
-                  <div className="why__band">
-                    <NormalBand
-                      value={anomaly.value}
-                      center={anomaly.baseline_center}
-                      spread={anomaly.baseline_spread}
-                      spec={s}
-                    />
-                    <span className="secondary data">
-                      {withUnit(signedNumber(anomaly.value - anomaly.baseline_center), s)} vs normal
-                    </span>
-                  </div>
+                  <NormalBand value={anomaly.value} center={anomaly.baseline_center} spread={anomaly.baseline_spread} spec={s} />
                 )}
-                {c.signal && (
-                  <p className="why__whatif secondary">
-                    If this {clearsWord}: <span className="data">{formatNumber(score, 0)}</span> →{" "}
-                    <span className="data">{formatNumber(without, 0)}</span> <LevelTag level={withoutLevel} />
-                  </p>
-                )}
-              </li>
+                {valueLine && <span className="contrib__value data">{valueLine}</span>}
+                <div className="contrib__without">
+                  <span>
+                    Without it: <span className="data">{formatNumber(without, 0)}</span>
+                  </span>
+                  <LevelTag level={withoutLevel} />
+                  <span className="visually-hidden">(score now {formatNumber(score, 0)})</span>
+                </div>
+              </Frame>
             );
           })}
         </ul>
@@ -147,7 +201,9 @@ function WhyPanel({
   );
 }
 
-function ActionsPanel({ cards }: { cards: readonly ActionCard[] }) {
+/* ---- actions ------------------------------------------------------------------------------ */
+
+export function ActionsPanel({ cards, heading = "What to do now" }: { cards: readonly ActionCard[]; heading?: string }) {
   const [done, setDone] = useState<Set<string>>(() => new Set());
   const toggle = (key: string) =>
     setDone((prev) => {
@@ -158,20 +214,37 @@ function ActionsPanel({ cards }: { cards: readonly ActionCard[] }) {
     });
 
   const tell = [...new Set(cards.map((c) => c.escalate_to ?? "self").filter((t) => t !== "self"))];
+  const totalSteps = cards.reduce((n, c) => n + (c.steps?.length ?? 0), 0);
 
   return (
     <section className="actions" aria-labelledby="actions-heading">
-      <h2 id="actions-heading" className="section-label">
-        What to do now
-      </h2>
+      <div className="section-head">
+        <h2 id="actions-heading" className="section-label">
+          {heading}
+        </h2>
+        {totalSteps > 0 && (
+          <span className="secondary data" aria-live="polite">
+            {done.size} of {totalSteps} done
+          </span>
+        )}
+      </div>
+      <div className="actions__progress" aria-hidden="true">
+        <span style={{ width: `${totalSteps ? (done.size / totalSteps) * 100 : 0}%` }} />
+      </div>
       {tell.length > 0 && (
         <p className="actions__tell">
-          <strong>Tell:</strong> {tell.map((t) => humanize(t)).join(", ")}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span>
+            Tell the <strong>{tell.map((t) => humanize(t).toLowerCase()).join(" and the ")}</strong> today.
+          </span>
         </p>
       )}
-      {cards.length === 0 && <p className="secondary card">No action cards for this result.</p>}
+      {cards.length === 0 && <p className="secondary">No action cards for this result.</p>}
       {cards.map((card) => (
-        <article key={card.card_id} className="action-card card">
+        <Frame as="article" key={card.card_id} className="action-card">
           <header className="action-card__head">
             <h3>{card.title}</h3>
             <LevelTag level={card.level} />
@@ -189,11 +262,11 @@ function ActionsPanel({ cards }: { cards: readonly ActionCard[] }) {
               );
             })}
           </ol>
-          <p className="secondary">{card.rationale}</p>
-          <p className="action-card__who secondary">
-            Who to tell: {(card.escalate_to ?? "self") === "self" ? "no one else needed" : humanize(card.escalate_to!)}
+          <p className="action-card__why">{card.rationale}</p>
+          <p className="action-card__who">
+            {(card.escalate_to ?? "self") === "self" ? "Handle this yourself" : `Escalates to ${humanize(card.escalate_to!).toLowerCase()}`}
           </p>
-        </article>
+        </Frame>
       ))}
     </section>
   );

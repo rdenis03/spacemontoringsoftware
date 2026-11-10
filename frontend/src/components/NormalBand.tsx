@@ -12,39 +12,29 @@ interface Props {
 }
 
 /**
- * ORBIT's signature element: your personal normal as a band, and where
- * today's reading sits against it. The same band appears, larger, in Trends.
+ * ORBIT's signature element: your personal normal as a band (center ±
+ * spread) and today's reading as a bar in its state colour.
  */
 export function NormalBand({ value, center, spread, spec }: Props) {
-  const low = center - spread;
-  const high = center + spread;
   const reach = Math.max(spread * 3, Math.abs(value - center) * 1.25, 1e-9);
   const min = center - reach;
-  const max = center + reach;
-  const x = (v: number) => ((v - min) / (max - min)) * 100;
-
-  const range = spec
-    ? `${withUnit(formatNumber(low), spec)} to ${withUnit(formatNumber(high), spec)}`
-    : `${formatNumber(low)} to ${formatNumber(high)}`;
-  const label = `${spec?.label ?? "Reading"} ${formatValue(value, spec)}; your normal is ${range}`;
-  // The dot takes the sensor's state colour (same zones as Trends).
+  const x = (v: number) => `${((v - min) / (2 * reach)) * 100}%`;
   const zone = spec ? zoneForReading(value, spec, { center, spread }) : null;
 
+  const range = spec
+    ? `${withUnit(formatNumber(center - spread), spec)} to ${withUnit(formatNumber(center + spread), spec)}`
+    : `${formatNumber(center - spread)} to ${formatNumber(center + spread)}`;
+  const label = `${spec?.label ?? "Reading"} ${formatValue(value, spec)}; your normal is ${range}`;
+
   return (
-    <svg className="normal-band" viewBox="0 0 100 24" preserveAspectRatio="none" role="img" aria-label={label}>
-      <line x1="0" x2="100" y1="12" y2="12" className="normal-band__track" vectorEffect="non-scaling-stroke" />
-      <rect x={x(low)} width={x(high) - x(low)} y="5" height="14" rx="2" className="normal-band__band" />
-      <line x1={x(low)} x2={x(low)} y1="5" y2="19" className="normal-band__edge" vectorEffect="non-scaling-stroke" />
-      <line x1={x(high)} x2={x(high)} y1="5" y2="19" className="normal-band__edge" vectorEffect="non-scaling-stroke" />
-      <line x1={x(center)} x2={x(center)} y1="8" y2="16" className="normal-band__center" vectorEffect="non-scaling-stroke" />
-      <ellipse
-        cx={x(value)}
-        cy="12"
-        rx="2.4"
-        ry="6"
+    <div className="normal-band" role="img" aria-label={label}>
+      <span className="normal-band__track" />
+      <span className="normal-band__band" style={{ left: x(center - spread), width: `${(spread / reach) * 50}%` }} />
+      <span className="normal-band__center" style={{ left: x(center) }} />
+      <span
         className="normal-band__dot"
-        style={zone ? { fill: levelColor(zone) } : undefined}
+        style={{ left: x(value), background: zone ? levelColor(zone) : "var(--color-neutral-700)" }}
       />
-    </svg>
+    </div>
   );
 }

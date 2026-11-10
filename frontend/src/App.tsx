@@ -1,12 +1,18 @@
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { api } from "./api/client";
 import { LoadError, Loading } from "./components/StateMessage";
+import { formatClock } from "./lib/format";
 import { useAsync } from "./lib/useAsync";
+import CheckinPage from "./routes/checkin/CheckinPage";
+import CrewPage from "./routes/crew/CrewPage";
 import DashboardPage from "./routes/dashboard/DashboardPage";
 import { useAstronaut } from "./state/astronaut";
 import { RegistryProvider } from "./state/registry";
 import { useRegistry } from "./state/registry-context";
 import "./App.css";
+
+/** The status is polled every 60 s (ORBIT frontend rules). */
+const POLL_MS = 60_000;
 
 export default function App() {
   const boot = useAsync(async (signal) => {
@@ -18,7 +24,9 @@ export default function App() {
     return (
       <div className="app">
         <header className="app-header">
-          <Brand />
+          <div className="app-header__inner">
+            <Brand />
+          </div>
         </header>
         <main className="app-main">
           {boot.error ? <LoadError error={boot.error} retry={boot.reload} what="the mission data" /> : <Loading what="mission data" />}
@@ -37,11 +45,11 @@ export default function App() {
 function Brand() {
   return (
     <span className="brand">
-      <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true">
         <circle cx="16" cy="16" r="5" className="brand__core" />
         <ellipse cx="16" cy="16" rx="13" ry="6" className="brand__orbit" transform="rotate(-25 16 16)" />
       </svg>
-      ORBIT
+      <span className="brand__word">ORBIT</span>
     </span>
   );
 }
@@ -50,6 +58,10 @@ function Shell() {
   const { crew } = useRegistry();
   const [astronaut, setAstronaut] = useAstronaut();
   const search = `?astronaut=${encodeURIComponent(astronaut)}`;
+  const status = useAsync((signal) => api.status(astronaut, signal), [astronaut], {
+    pollMs: POLL_MS,
+    enabled: Boolean(astronaut),
+  });
 
   return (
     <div className="app">
@@ -57,47 +69,51 @@ function Shell() {
         Skip to content
       </a>
       <header className="app-header">
-        <Brand />
-        <nav className="app-nav" aria-label="Screens">
-          <NavLink to={{ pathname: "/", search }} end>
-            Dashboard
-          </NavLink>
-          <NavLink to={{ pathname: "/checkin", search }}>Check-in</NavLink>
-          <NavLink to={{ pathname: "/crew", search }}>Crew</NavLink>
-        </nav>
-        <label className="astronaut-switcher">
-          <span className="visually-hidden">Astronaut</span>
-          <select className="select" value={astronaut} onChange={(e) => setAstronaut(e.target.value)}>
-            {crew.map((m) => (
-              <option key={m.astronaut_id} value={m.astronaut_id}>
-                {m.callsign} · {m.astronaut_id}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="app-header__inner">
+          <Brand />
+          <nav className="app-nav" aria-label="Screens">
+            <NavLink to={{ pathname: "/", search }} end>
+              Dashboard
+            </NavLink>
+            <NavLink to={{ pathname: "/checkin", search }}>Check-in</NavLink>
+            <NavLink to={{ pathname: "/crew", search }}>Crew</NavLink>
+          </nav>
+          <div className="app-header__tools">
+            <div className="clock">
+              <span className="kicker">Mission time</span>
+              <span className="clock__value data">
+                {status.data ? `MD ${status.data.mission_day} · ${formatClock(status.data.as_of)}` : "—"}
+              </span>
+            </div>
+            <label className="astronaut-switcher">
+              <span className="kicker">Astronaut</span>
+              <select className="input" value={astronaut} onChange={(e) => setAstronaut(e.target.value)}>
+                {crew.map((m) => (
+                  <option key={m.astronaut_id} value={m.astronaut_id}>
+                    {m.callsign} · {m.astronaut_id}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
       </header>
 
       <main id="main" className="app-main">
         <Routes>
-          <Route path="/" element={<DashboardPage astronautId={astronaut} />} />
-          <Route path="/checkin" element={<Planned title="Daily check-in" module="M11" />} />
-          <Route path="/crew" element={<Planned title="Crew view" module="M14" />} />
+          <Route path="/" element={<DashboardPage astronautId={astronaut} status={status} />} />
+          <Route path="/checkin" element={<CheckinPage astronautId={astronaut} status={status} />} />
+          <Route path="/crew" element={<CrewPage freshness={status.data?.as_of ?? ""} />} />
           <Route path="*" element={<Navigate to={{ pathname: "/", search }} replace />} />
         </Routes>
       </main>
 
-      <footer className="app-footer secondary">
-        Scores and action cards are illustrative for this demo, not medical advice.
+      <footer className="app-footer">
+        <div className="app-footer__inner">
+          <span>Scores and action cards are illustrative for this demo, not medical advice.</span>
+          <span className="data">Status refreshes every 60 s · mission time, UTC</span>
+        </div>
       </footer>
     </div>
-  );
-}
-
-function Planned({ title, module }: { title: string; module: string }) {
-  return (
-    <section className="card planned">
-      <h2>{title}</h2>
-      <p className="secondary">This screen is being built ({module}).</p>
-    </section>
   );
 }

@@ -1,4 +1,9 @@
-import { useMemo } from "react";
+/**
+ * Trends: every sensor in a list on the left (state, latest value, a
+ * sparkline over the personal normal), and the chosen sensor over time on
+ * coloured zones in a sticky frame on the right.
+ */
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Area,
@@ -14,12 +19,22 @@ import {
 } from "recharts";
 import { api } from "../../api/client";
 import type { Anomaly, Baseline, ContextEvent, DayResult, Observation, SignalSpec } from "../../api/types";
+import { Frame } from "../../components/Frame";
 import { LevelIcon } from "../../components/LevelIcon";
 import { LevelDot } from "../../components/LevelShape";
+import { Sparkline } from "../../components/Sparkline";
 import { LoadError, Loading } from "../../components/StateMessage";
 import { dayTickLabel, dayTicks, ms, paddedDomain } from "../../lib/chart";
-import { formatMissionTime, formatNumber, formatValue, humanize, missionDay, signedNumber, withUnit } from "../../lib/format";
-import { levelColor } from "../../lib/levels";
+import {
+  categoryName,
+  eventName,
+  formatMissionTime,
+  formatNumber,
+  formatValue,
+  missionDay,
+  withUnit,
+} from "../../lib/format";
+import { levelInk } from "../../lib/levels";
 import { useAsync } from "../../lib/useAsync";
 import { useTokens } from "../../lib/useTokens";
 import { NO_NORMAL, ZONE_COPY, ZONE_STEPS, ZONES, type Zone, zoneForReading, zoneRanges } from "../../lib/zones";
@@ -31,7 +46,7 @@ interface Props {
   freshness: string;
 }
 
-/** How far back the sensor overview looks for each signal's latest reading (weekly lab tests included). */
+/** How far back the sensor list looks for each signal's latest reading (weekly lab tests included). */
 const OVERVIEW_DAYS = 8;
 
 export default function Trends({ astronautId, status, freshness }: Props) {
@@ -45,8 +60,9 @@ export default function Trends({ astronautId, status, freshness }: Props) {
     registry.signals[0]?.signal;
   const signal = spec(params.get("signal")) ? params.get("signal")! : (fallback ?? "");
   const s = spec(signal);
+  const missionStart = member(astronautId)?.mission_start;
 
-  const setSignal = (next: string) =>
+  const setSignal = (next: string) => {
     setParams(
       (prev) => {
         const p = new URLSearchParams(prev);
@@ -55,6 +71,12 @@ export default function Trends({ astronautId, status, freshness }: Props) {
       },
       { replace: true },
     );
+    // On narrow screens the chart sits below the list: bring it into view.
+    if (window.matchMedia("(max-width: 900px)").matches) {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      document.getElementById("trend-detail")?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    }
+  };
 
   const overviewStart = status ? new Date(ms(status.as_of) - OVERVIEW_DAYS * 86_400_000).toISOString() : undefined;
   const overview = useAsync((abort) => api.observations(astronautId, [], abort, overviewStart), [astronautId, freshness], {
@@ -76,41 +98,51 @@ export default function Trends({ astronautId, status, freshness }: Props) {
 
   return (
     <div className="trends">
-      {overview.error ? (
-        <LoadError error={overview.error} retry={overview.reload} what="sensor readings" />
-      ) : !overview.data ? (
-        <Loading what="sensors" />
-      ) : (
-        <SensorGrid
-          readings={overview.data}
-          baselines={status?.baselines ?? []}
-          selected={signal}
-          onSelect={setSignal}
-          missionStart={member(astronautId)?.mission_start}
-        />
-      )}
+      <aside className="sensor-list" aria-labelledby="sensors-heading">
+        <div className="sensor-list__head">
+          <h2 id="sensors-heading" className="section-label">
+            All sensors
+          </h2>
+          <ZoneKey />
+        </div>
+        {overview.error ? (
+          <LoadError error={overview.error} retry={overview.reload} what="sensor readings" />
+        ) : !overview.data ? (
+          <Loading what="sensors" />
+        ) : (
+          <SensorGroups
+            readings={overview.data}
+            baselines={status?.baselines ?? []}
+            selected={signal}
+            onSelect={setSignal}
+            missionStart={missionStart}
+          />
+        )}
+      </aside>
 
-      {detail.error ? (
-        <LoadError error={detail.error} retry={detail.reload} what="readings" />
-      ) : !detail.data || !s ? (
-        <Loading what="readings" />
-      ) : (
-        <TrendChart
-          spec={s}
-          observations={detail.data.observations}
-          baselines={detail.data.baselines}
-          events={detail.data.events}
-          anomalies={(status?.anomalies ?? []).filter((a) => a.signal === signal)}
-          missionStart={member(astronautId)?.mission_start}
-        />
-      )}
+      <div id="trend-detail" className="trends__detail">
+        {detail.error ? (
+          <LoadError error={detail.error} retry={detail.reload} what="readings" />
+        ) : !detail.data || !s ? (
+          <Loading what="readings" />
+        ) : (
+          <TrendChart
+            spec={s}
+            observations={detail.data.observations}
+            baselines={detail.data.baselines}
+            events={detail.data.events}
+            anomalies={(status?.anomalies ?? []).filter((a) => a.signal === signal)}
+            missionStart={missionStart}
+          />
+        )}
+      </div>
     </div>
   );
 }
 
-/* ---- every sensor at a glance ------------------------------------------------ */
+/* ---- every sensor, grouped ------------------------------------------------------------------ */
 
-function SensorGrid({
+function SensorGroups({
   readings,
   baselines,
   selected,
@@ -125,61 +157,64 @@ function SensorGrid({
 }) {
   const { registry } = useRegistry();
 
-  const latest = useMemo(() => {
-    const map = new Map<string, Observation>();
+  const series = useMemo(() => {
+    const map = new Map<string, Observation[]>();
     for (const o of readings) {
-      const prev = map.get(o.signal);
-      if (!prev || ms(o.timestamp) > ms(prev.timestamp)) map.set(o.signal, o);
+      const list = map.get(o.signal) ?? [];
+      list.push(o);
+      map.set(o.signal, list);
     }
+    for (const list of map.values()) list.sort((a, b) => ms(a.timestamp) - ms(b.timestamp));
     return map;
   }, [readings]);
   const baselineFor = new Map<string, Baseline>(baselines.map((b) => [b.signal, b]));
 
   return (
-    <section className="sensors" aria-labelledby="sensors-heading">
-      <div className="sensors__head">
-        <h2 id="sensors-heading" className="section-label">
-          All sensors
-        </h2>
-        <ZoneKey />
-      </div>
+    <>
       {registry.categories.map((category) => {
         const signals = registry.signals.filter((x) => x.category === category);
         if (signals.length === 0) return null;
         return (
-          <div key={category} className="sensors__group">
-            <h3 className="sensors__category">{humanize(category)}</h3>
-            <ul className="sensors__grid">
+          <div key={category} className="sensor-group">
+            <h3 className="sensor-group__title">{categoryName(category)}</h3>
+            <ul>
               {signals.map((spec) => {
-                const reading = latest.get(spec.signal);
+                const points = series.get(spec.signal) ?? [];
+                const reading = points[points.length - 1];
                 const baseline = baselineFor.get(spec.signal);
                 const zone = reading ? zoneForReading(reading.value, spec, baseline) : null;
                 const state = zone ? ZONE_COPY[zone].short : reading ? NO_NORMAL : "No recent reading";
-                const delta =
-                  reading && baseline && spec.kind !== "ordinal"
-                    ? `${withUnit(signedNumber(reading.value - baseline.center), spec)} vs normal`
-                    : null;
                 const when = reading && missionStart ? `day ${missionDay(reading.timestamp, missionStart)}` : "";
-                const isSelected = spec.signal === selected;
+                const ordinal = spec.kind === "ordinal";
                 return (
                   <li key={spec.signal}>
                     <button
                       type="button"
-                      className="sensor"
-                      aria-pressed={isSelected}
-                      style={{ ["--sensor-zone" as string]: zone ? levelColor(zone) : "var(--separator)" }}
+                      className="sensor-row"
+                      aria-pressed={spec.signal === selected}
                       onClick={() => onSelect(spec.signal)}
                       aria-label={`${spec.label}: ${reading ? formatValue(reading.value, spec) : "no recent reading"}, ${state}${when ? `, ${when}` : ""}. Show trend.`}
                     >
-                      <span className="sensor__top">
-                        <LevelIcon level={zone ?? "none"} size={16} />
-                        <span className="sensor__label">{spec.label}</span>
+                      <LevelIcon level={zone ?? "none"} size={12} />
+                      <span className="sensor-row__text">
+                        <span className="sensor-row__label">{spec.label}</span>
+                        <span className="sensor-row__line">
+                          <span className="sensor-row__value data">{reading ? formatValue(reading.value, spec) : "—"}</span>
+                          <span className="sensor-row__state" style={{ color: zone ? levelInk(zone) : "var(--color-neutral-700)" }}>
+                            {state}
+                          </span>
+                        </span>
                       </span>
-                      <span className="sensor__value data">{reading ? formatValue(reading.value, spec) : "—"}</span>
-                      <span className="sensor__state">
-                        {state}
-                        {delta && <span className="data"> · {delta}</span>}
-                      </span>
+                      <Sparkline
+                        points={points.map((o) => ({ t: ms(o.timestamp), v: o.value }))}
+                        band={
+                          baseline && !ordinal
+                            ? { low: baseline.center - baseline.spread, high: baseline.center + baseline.spread }
+                            : undefined
+                        }
+                        domain={ordinal ? [spec.plausible_min, spec.plausible_max] : undefined}
+                        lastLevel={zone}
+                      />
                     </button>
                   </li>
                 );
@@ -188,29 +223,29 @@ function SensorGrid({
           </div>
         );
       })}
-    </section>
+    </>
   );
 }
 
-/** Legend for the four sensor states, shared by the grid and the chart. */
+/** Legend for the sensor states, shared by the list and the chart. */
 function ZoneKey() {
   return (
     <ul className="zone-key" aria-label="Sensor states">
       {ZONES.map((zone) => (
         <li key={zone}>
-          <LevelIcon level={zone} size={14} />
+          <LevelIcon level={zone} size={11} />
           {ZONE_COPY[zone].short}
         </li>
       ))}
       <li>
-        <LevelIcon level="none" size={14} />
+        <LevelIcon level="none" size={11} />
         {NO_NORMAL}
       </li>
     </ul>
   );
 }
 
-/* ---- one sensor over time, on coloured zones ---------------------------------- */
+/* ---- one sensor over time, on coloured zones ------------------------------------------------ */
 
 interface Row {
   t: number;
@@ -235,6 +270,7 @@ function TrendChart({
   missionStart: string | undefined;
 }) {
   const tokens = useTokens();
+  const [showTable, setShowTable] = useState(false);
   const ordinal = spec.kind === "ordinal" && Boolean(spec.scale_labels);
   const sortedBaselines = useMemo(() => [...baselines].sort((a, b) => ms(a.as_of) - ms(b.as_of)), [baselines]);
   const latestBaseline = sortedBaselines[sortedBaselines.length - 1];
@@ -248,7 +284,7 @@ function TrendChart({
       const { center: c, spread: sp } = latestBaseline;
       const upFar = spec.concern === "up" || spec.concern === "both";
       const downFar = spec.concern === "down" || spec.concern === "both";
-      values.push(c + sp * (upFar ? ZONE_STEPS[2] + 0.5 : 1.5), c - sp * (downFar ? ZONE_STEPS[2] + 0.5 : 1.5));
+      values.push(c + sp * (upFar ? ZONE_STEPS[2] + 0.6 : 1.6), c - sp * (downFar ? ZONE_STEPS[2] + 0.6 : 1.6));
     }
     return paddedDomain(values, 0.05);
   }, [ordinal, spec, observations, latestBaseline]);
@@ -267,12 +303,17 @@ function TrendChart({
   }, [observations, sortedBaselines, ordinal, spec.concern, yDomain]);
 
   if (observations.length === 0) {
-    return <p className="card secondary">No readings for {spec.label.toLowerCase()} yet.</p>;
+    return (
+      <Frame className="trend">
+        <span className="kicker">{spec.label}</span>
+        <h2 className="trend__summary">No readings for {spec.label.toLowerCase()} yet.</h2>
+      </Frame>
+    );
   }
 
   const tMin = rows[0].t;
   const tMax = rows[rows.length - 1].t;
-  const ticks = dayTicks(tMin, tMax);
+  const ticks = dayTicks(tMin, tMax, 7);
   const dayLabel = dayTickLabel(missionStart);
   const yTicks = ordinal
     ? Array.from({ length: spec.plausible_max - spec.plausible_min + 1 }, (_, i) => spec.plausible_min + i)
@@ -288,21 +329,19 @@ function TrendChart({
 
   const summary = summarize(spec, observations, sortedBaselines, missionStart);
   const zoneOf = (t: number, value: number) => zoneForReading(value, spec, baselineAt(sortedBaselines, t));
+  const kicker = `${spec.label}${ordinal ? "" : ` · ${spec.unit_label}`} · ${observations.length} readings`;
 
   return (
-    <section className="trend card" aria-labelledby="trend-title">
-      <h2 id="trend-title" className="trend__title">
+    <Frame className="trend" aria-labelledby="trend-title">
+      <span className="kicker">{kicker}</span>
+      <h2 id="trend-title" className="trend__summary">
         {summary}
       </h2>
-      <p className="secondary">
-        {spec.label}
-        {ordinal ? "" : `, ${spec.unit_label}`} · {observations.length} readings · {spec.description}
-      </p>
+      <p className="trend__desc">{spec.description}</p>
 
       <figure className="trend__figure" role="img" aria-label={`Line chart of ${spec.label} over time on coloured zones. ${summary}`}>
         <ResponsiveContainer width="100%" height={340}>
-          <ComposedChart data={rows} margin={{ top: 24, right: 8, bottom: 8, left: 8 }}>
-            {/* Ordinal scales: one horizontal band per scale value, like History. */}
+          <ComposedChart data={rows} margin={{ top: 20, right: 4, bottom: 4, left: 4 }}>
             {ordinal &&
               yTicks!.map((v) => {
                 const zone = zoneForReading(v, spec, undefined) ?? "green";
@@ -312,13 +351,12 @@ function TrendChart({
                     y1={v - 0.5}
                     y2={v + 0.5}
                     fill={tokens.level[zone]}
-                    fillOpacity={0.13}
+                    fillOpacity={0.14}
                     stroke="none"
                     ifOverflow="hidden"
                   />
                 );
               })}
-            {/* Continuous signals: zones follow the personal normal day by day. */}
             {zoneKeys.map((z) => (
               <Area
                 key={z.key}
@@ -327,13 +365,13 @@ function TrendChart({
                 connectNulls
                 isAnimationActive={false}
                 fill={tokens.level[z.zone]}
-                fillOpacity={z.zone === "green" ? 0.16 : 0.13}
+                fillOpacity={z.zone === "red" ? 0.14 : 0.16}
                 stroke="none"
                 activeDot={false}
                 tooltipType="none"
               />
             ))}
-            <CartesianGrid stroke={tokens.separator} strokeDasharray="2 4" vertical={false} />
+            <CartesianGrid stroke={tokens.n400} strokeDasharray="2 4" vertical={false} />
             <XAxis
               dataKey="t"
               type="number"
@@ -341,17 +379,19 @@ function TrendChart({
               domain={[tMin, tMax]}
               ticks={ticks}
               tickFormatter={dayLabel}
-              stroke={tokens.secondary}
-              tick={{ fill: tokens.secondary, fontSize: 13 }}
+              stroke={tokens.text}
+              tickLine={{ stroke: tokens.text }}
+              tick={{ fill: tokens.n700, fontSize: 13 }}
             />
             <YAxis
               orientation="right"
               domain={yDomain}
               ticks={yTicks}
               tickFormatter={yLabel}
-              stroke={tokens.secondary}
-              tick={{ fill: tokens.secondary, fontSize: 13 }}
-              width={ordinal ? 84 : 56}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: tokens.n700, fontSize: 13 }}
+              width={ordinal ? 84 : 52}
               allowDataOverflow
               allowDecimals={!ordinal}
             />
@@ -363,11 +403,11 @@ function TrendChart({
                   key={e.event_id ?? e.start}
                   x1={Math.max(start, tMin)}
                   x2={Math.min(end, tMax)}
-                  fill={tokens.secondary}
-                  fillOpacity={0.18}
-                  stroke={tokens.secondary}
-                  strokeOpacity={0.5}
-                  label={{ value: humanize(e.event_type), position: "insideTopLeft", fill: tokens.content, fontSize: 13 }}
+                  fill={tokens.n600}
+                  fillOpacity={0.14}
+                  stroke={tokens.n500}
+                  strokeDasharray="3 3"
+                  label={{ value: eventName(e.event_type), position: "insideBottomLeft", fill: tokens.n800, fontSize: 12 }}
                 />
               );
             })}
@@ -379,8 +419,8 @@ function TrendChart({
                 isAnimationActive={false}
                 dot={false}
                 activeDot={false}
-                stroke={tokens.bandEdge}
-                strokeDasharray="3 3"
+                stroke={tokens.accent700}
+                strokeDasharray="5 4"
                 strokeWidth={1}
                 tooltipType="none"
               />
@@ -390,7 +430,7 @@ function TrendChart({
               type={ordinal ? "stepAfter" : "linear"}
               connectNulls
               isAnimationActive={false}
-              stroke={tokens.content}
+              stroke={tokens.text}
               strokeWidth={2}
               dot={(props: { cx?: number; cy?: number; payload?: Row }) => {
                 const row = props.payload;
@@ -400,15 +440,15 @@ function TrendChart({
                     key={`${row?.t}`}
                     cx={props.cx}
                     cy={props.cy}
-                    level={zone}
+                    level={row?.value !== undefined ? zone : null}
                     color={zone ? tokens.level[zone] : undefined}
-                    stroke={tokens.raised}
-                    neutral={tokens.content}
-                    r={5}
+                    stroke={tokens.bg}
+                    neutral={tokens.text}
+                    r={observations.length > 20 ? 4.5 : 6}
                   />
                 );
               }}
-              activeDot={{ r: 6 }}
+              activeDot={{ r: 6, fill: tokens.text, stroke: tokens.bg }}
               name={spec.label}
             />
             {anomalies.map((a) => (
@@ -416,16 +456,16 @@ function TrendChart({
                 key={a.detected_at}
                 x={ms(a.detected_at)}
                 y={a.value}
-                r={11}
+                r={13}
                 fill="none"
-                stroke={tokens.content}
+                stroke={tokens.text}
                 strokeWidth={2}
-                label={{ value: "Flagged today", position: "top", fill: tokens.content, fontSize: 13 }}
+                label={{ value: "Flagged today", position: "top", fill: tokens.text, fontSize: 13 }}
               />
             ))}
             <Tooltip
               content={<TrendTooltip spec={spec} missionStart={missionStart} zoneOf={zoneOf} baselines={sortedBaselines} />}
-              cursor={{ stroke: tokens.secondary, strokeWidth: 1 }}
+              cursor={{ stroke: tokens.n500, strokeWidth: 1 }}
             />
           </ComposedChart>
         </ResponsiveContainer>
@@ -440,34 +480,30 @@ function TrendChart({
             <span className="legend__center" /> Center of your normal
           </li>
         )}
-        {ordinal ? (
-          (spec.scale_labels ?? []).map((word, i) => {
-            const zone = zoneForReading(spec.plausible_min + i, spec, undefined) ?? "green";
-            return (
-              <li key={word}>
-                <LevelIcon level={zone} size={14} /> {word}
-              </li>
-            );
-          })
-        ) : latestBaseline ? (
-          ZONES.map((zone, i) => (
-            <li key={zone}>
-              <LevelIcon level={zone} size={14} /> {ZONE_COPY[zone].short}
-              <span className="data">
-                {i === 0 ? ` (< ${ZONE_STEPS[0]}×)` : i === 3 ? ` (≥ ${ZONE_STEPS[2]}×)` : ` (${ZONE_STEPS[i - 1]}–${ZONE_STEPS[i]}×)`}
-              </span>
-            </li>
-          ))
-        ) : (
-          <li>
-            <LevelIcon level="none" size={14} /> {NO_NORMAL}
-          </li>
-        )}
-        {visibleEvents.length > 0 && (
-          <li>
-            <span className="legend__event" /> Event
-          </li>
-        )}
+        {ordinal
+          ? (spec.scale_labels ?? []).map((word, i) => {
+              const zone = zoneForReading(spec.plausible_min + i, spec, undefined) ?? "green";
+              return (
+                <li key={word}>
+                  <LevelIcon level={zone} size={11} /> {word}
+                </li>
+              );
+            })
+          : latestBaseline
+            ? ZONES.map((zone, i) => (
+                <li key={zone}>
+                  <LevelIcon level={zone} size={11} /> {ZONE_COPY[zone].short}{" "}
+                  {i === 0 ? `(< ${ZONE_STEPS[0]}×)` : i === 3 ? `(≥ ${ZONE_STEPS[2]}×)` : `(${ZONE_STEPS[i - 1]}–${ZONE_STEPS[i]}×)`}
+                </li>
+              ))
+            : (
+                <li>
+                  <LevelIcon level="none" size={11} /> {NO_NORMAL}
+                </li>
+              )}
+        <li>
+          <span className="legend__event" /> Event
+        </li>
         {anomalies.length > 0 && (
           <li>
             <span className="legend__ring" /> Flagged today
@@ -475,17 +511,23 @@ function TrendChart({
         )}
       </ul>
       {!ordinal && latestBaseline && (
-        <p className="secondary">
-          Zones are measured in your usual day-to-day variation, and only in the direction that matters for this
-          signal ({spec.concern === "up" ? "higher" : spec.concern === "down" ? "lower" : "higher or lower"}).
+        <p className="trend__note">
+          Zones are measured in your usual day-to-day variation, and only in the direction that matters for this signal (
+          {spec.concern === "up" ? "higher" : spec.concern === "down" ? "lower" : "higher or lower"}).
         </p>
       )}
 
-      <details className="data-table">
-        <summary>Show readings as a table</summary>
-        <ReadingsTable spec={spec} observations={observations} baselines={sortedBaselines} missionStart={missionStart} />
-      </details>
-    </section>
+      <div className="trend__table">
+        <button type="button" className="btn btn-ghost" aria-expanded={showTable} onClick={() => setShowTable((v) => !v)}>
+          {showTable ? "Hide readings table" : "Show readings as a table"}
+        </button>
+        {showTable && (
+          <div className="table-scroll">
+            <ReadingsTable spec={spec} observations={observations} baselines={sortedBaselines} missionStart={missionStart} />
+          </div>
+        )}
+      </div>
+    </Frame>
   );
 }
 
@@ -506,7 +548,7 @@ function summarize(spec: SignalSpec, observations: Observation[], baselines: Bas
   const value = formatValue(latest.value, spec);
   const base = baselineAt(baselines, ms(latest.timestamp)) ?? baselines[baselines.length - 1];
   if (spec.kind === "ordinal") return `Latest: ${value} on ${when}.`;
-  if (!base) return `Latest: ${value} on ${when}. Not enough history yet for your personal normal.`;
+  if (!base) return `Latest: ${value} on ${when}. No personal normal for this signal yet.`;
   const zone = zoneForReading(latest.value, spec, base);
   const diff = latest.value - base.center;
   const direction = diff > 0 ? "above" : "below";
@@ -540,13 +582,13 @@ function TrendTooltip({
   const base = baselineAt(baselines, t);
   return (
     <div className="chart-tooltip">
-      <p className="data">
+      <p className="kicker">
         {missionStart ? `Day ${missionDay(t, missionStart)} · ` : ""}
         {formatMissionTime(new Date(t).toISOString())}
       </p>
-      <p>{formatValue(row.value, spec)}</p>
-      <p className="tooltip-zone">
-        <LevelIcon level={zone ?? "none"} size={12} /> {zone ? ZONE_COPY[zone].long : NO_NORMAL}
+      <p className="chart-tooltip__value">{formatValue(row.value, spec)}</p>
+      <p className="chart-tooltip__zone" style={{ color: zone ? levelInk(zone) : undefined }}>
+        <LevelIcon level={zone ?? "none"} size={10} /> {zone ? ZONE_COPY[zone].long : NO_NORMAL}
       </p>
       {base && spec.kind !== "ordinal" && (
         <p className="secondary">
@@ -586,12 +628,12 @@ function ReadingsTable({
           const zone = zoneForReading(o.value, spec, base);
           return (
             <tr key={o.observation_id ?? o.timestamp}>
-              <td className="data">{missionStart ? missionDay(o.timestamp, missionStart) : "—"}</td>
-              <td className="data">{formatMissionTime(o.timestamp)}</td>
+              <td>{missionStart ? missionDay(o.timestamp, missionStart) : "—"}</td>
+              <td>{formatMissionTime(o.timestamp)}</td>
               <td>{formatValue(o.value, spec)}</td>
               <td>
-                <span className="table-zone">
-                  <LevelIcon level={zone ?? "none"} size={12} /> {zone ? ZONE_COPY[zone].short : NO_NORMAL}
+                <span className="table-zone" style={{ color: zone ? levelInk(zone) : undefined }}>
+                  <LevelIcon level={zone ?? "none"} size={10} /> {zone ? ZONE_COPY[zone].short : NO_NORMAL}
                 </span>
               </td>
               <td className="secondary">
