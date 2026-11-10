@@ -119,6 +119,27 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - Tests run in-process (`TestClient`, `Store(":memory:")`); the tool loads via importlib from `tools/live_demo.py` (not a package).
 - Checked against a running `serve` with a scratch database: green 0.0, yellow 27.0, back to green 0.0 in `/api/overview`.
 
+## B16 · Outbox with comms delay
+
+- Done on `ui/persoana-b` together with the frontend's Earth comms screen, then aligned to this spec.
+- `OutboxEntry` in `orbit.core.store`: `id`, `astronaut_id`, `created_at`, `deliver_at`, `packet`, `summary=""` (B17 fills it), `auto=False` (B18 sets it). Frozen, `extra="forbid"`.
+- Store: `queue(entry)` (same `id` replaces), `outbox(astronaut_id=None)` newest first; `outbox` is in `counts()`. `CREATE TABLE IF NOT EXISTS`, so old databases open and gain the table.
+- `Settings.comms_delay_minutes` from `[comms] one_way_delay_minutes` (0 to 1440, else `ConfigError`); `create_app(..., comms_delay_minutes=..., clock=None)`. `cmd_serve` and `create_app_from_settings` pass it.
+- `clock` is a UTC callable used only by the queue; tests pass a settable one (`tests/test_sync.py::Clock`). Comms time is real time, not mission time.
+- `POST /api/crew/{id}/earth-packet/send?start=&end=&delay_minutes=` returns an `OutboxItem`; 422 if `end < start`, 404 for an unknown astronaut. IDs are `pkt-<12 hex>`.
+- `GET /api/outbox?astronaut_id=` returns `OutboxItem`s: the entry plus `status` (`queued`/`delivered`), `seconds_left`, and `sent` / `withheld` counts per category. B17: set `summary` on the entry you queue; `outbox_item()` inside `create_app` passes it through.
+- `GET /api/health` also returns `comms.one_way_delay_minutes`; the Earth screen shows it as the Mars link.
+- B18: reuse `pipeline.earth_packet(...)` and `store.queue(...)` with `auto=True`; check `store.outbox(astronaut_id)` for an auto packet on the same UTC day first.
+
+## B19 · Action cards v2
+
+- Done on `ui/persoana-b`. Library: `cards/action_cards.jsonl` (17 cards), active via `[modules.actions] use = "protocol"`, `cards_path`, `max_cards = 3`; `card_library` stays registered as the fallback.
+- New engine `protocol` in `orbit/modules/actions.py` (`ProtocolActionEngine`): ranks cards at the assessment's level by the summed points of the reasons their triggers explain; general cards (no triggers) follow; if no card at that level fits a reason, the most relevant cards from the level just below are added after the general card; never above the level; at most `max_cards`.
+- `check_library(cards)` runs on load and raises `CardLibraryError` for: a level without a general card, an orange/red card with `escalate_to = self`, duplicate ids, or triggers that mix categories.
+- One category per card, as asked: VZV, HSV-1, EBV and CRP/WBC are lab cards (`reduce-load`, `hsv-test`, `ebv-test`, `inflammation-check`); rash, mouth sores, throat/glands and fever are symptom cards (`protect-rash`, `mouth-care`, `throat-glands`, `limit-spread`). Lab cards never name a symptom, so the shared view can show them in full.
+- Demo story unchanged: day 89 `saliva-test`, `rest-watch`; day 90 `reduce-load` (VZV), `protect-rash`, `tell-cmo`. In the shared view day 90 shows `reduce-load` and `tell-cmo` in full and `protect-rash` as "Private action".
+- Tests in `tests/test_actions.py`.
+
 ## B06 · Evaluation runner and CLI
 
 - `python -m orbit.evaluation --config orbit.toml [--config X.toml ...] --days 180 --crew 4 --seeds 1 2 3 4 5 [--min-level yellow] --out data/reports/evaluation.json`. Reports go under `data/` (git-ignored), not `reports/`.

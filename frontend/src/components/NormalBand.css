@@ -1,0 +1,39 @@
+.normal-band {
+  position: relative;
+  height: 20px;
+}
+
+.normal-band__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 9px;
+  height: 1px;
+  background: var(--color-neutral-400);
+}
+
+.normal-band__band {
+  position: absolute;
+  top: 3px;
+  height: 14px;
+  background: var(--band);
+  border-left: 1px solid var(--band-edge);
+  border-right: 1px solid var(--band-edge);
+}
+
+.normal-band__center {
+  position: absolute;
+  top: 6px;
+  height: 8px;
+  width: 1px;
+  background: var(--band-center);
+}
+
+.normal-band__dot {
+  position: absolute;
+  top: 3px;
+  width: 6px;
+  height: 14px;
+  margin-left: -3px;
+  outline: 2px solid var(--color-bg);
+}
