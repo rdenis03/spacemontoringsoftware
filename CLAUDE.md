@@ -41,3 +41,5 @@ python -m orbit serve                     # API on :8000, docs at /docs
 - The demo story in `tests/test_pipeline.py` (AST-01 yellow on day 89, orange
   on day 90) changes only when the team agrees.
 - Medical weights, thresholds and action cards are illustrative, never clinical advice.
+- Paths in a config file are relative to that file: in `experiments/*.toml`,
+  write `../data/...` and `../examples/...` to reach the project root.
