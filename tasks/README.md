@@ -83,7 +83,7 @@ every API task edits `orbit/api/app.py`.
 | [x] | [B14](B14-api-consent.md) | Consent editing endpoint | API | B13 (order only) | S |
 | [x] | [B15](B15-api-shared-status.md) | Shared status for the crew view | API | B14 (order only) | S |
 | [x] | [B16](B16-outbox.md) | Outbox with comms delay | API | B15 (order only) | M |
-| [ ] | [B17](B17-earth-report.md) | Plain-language report for Earth | API | B16 | S |
+| [x] | [B17](B17-earth-report.md) | Plain-language report for Earth | API | B16 | S |
 | [ ] | [B18](B18-auto-send.md) | Auto-send on orange or red | API | B17 | S |
 | [x] | [B19](B19-action-cards.md) | Action cards v2 | Crew guidance | none | S |
 | [x] | [B20](B20-live-demo-tool.md) | Live body demo tool | Demo | none | S |

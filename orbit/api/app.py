@@ -17,7 +17,8 @@ dashboard and the command line always show exactly the same results.
     GET  /api/crew/{id}/assessments          score history for the trend line
     POST /api/crew/{id}/checkin              daily check-in (M11); re-assesses at once
     GET  /api/crew/{id}/earth-packet         what would be sent to Earth (M13)
-    POST /api/crew/{id}/earth-packet/send    package and queue for Earth with the comms delay (M13)
+    POST /api/crew/{id}/earth-packet/send    package and queue for Earth with the comms delay (M13);
+                                             adds a one-line report for the flight surgeon
     GET  /api/outbox                         queued and delivered packets (M13)
     GET  /api/events                         stress events (solar, EVA ...)
     POST /api/observations                   push readings from a device or feed (M3)
@@ -54,6 +55,8 @@ from orbit.schema import (
     parse_records,
 )
 from orbit.schema.export import registry_document
+
+from .earth_report import build_report
 
 # ---- request and response bodies --------------------------------------------
 
@@ -359,17 +362,26 @@ def create_app(
                         "Default: [comms] one_way_delay_minutes in orbit.toml.",
         ),
     ) -> OutboxItem:
-        """Package the period through the consent gate and queue it for Earth (B16)."""
-        member_or_404(astronaut_id)
+        """Package the period through the consent gate and queue it for Earth (B16).
+
+        ``summary`` is the plain-language report for the flight surgeon (B17).
+        """
+        member = member_or_404(astronaut_id)
         start_utc, end_utc = _utc(start), _utc(end)
         if end_utc < start_utc:
             raise HTTPException(422, "end must not be before start")
         delay = comms_delay_minutes if delay_minutes is None else delay_minutes
         created = now()
+        packet = pipeline.earth_packet(astronaut_id, start_utc, end_utc)
+        # The cards advised with the latest assessment in the packet.
+        actions: list[ActionCard] = []
+        if packet.assessments:
+            latest = max(packet.assessments, key=lambda a: (a.assessed_at, a.assessment_id))
+            actions = store.recommendations(latest.assessment_id)
         entry = OutboxEntry(
             id=f"pkt-{uuid.uuid4().hex[:12]}", astronaut_id=astronaut_id,
             created_at=created, deliver_at=created + timedelta(minutes=delay),
-            packet=pipeline.earth_packet(astronaut_id, start_utc, end_utc),
+            packet=packet, summary=build_report(member, packet, actions),
         )
         store.queue(entry)
         return outbox_item(entry)
