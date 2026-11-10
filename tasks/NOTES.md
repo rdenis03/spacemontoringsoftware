@@ -82,3 +82,16 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - List mode contains exactly what is listed. Look-alike keys: `type`, `day`, `astronaut` (not for solar), `nights` (not for EVA).
 - `confounders=False, faults=False` is byte-identical to B03 (checked against main for seeds 1-3); look-alikes draw from their own generator.
 - Default 180 d x 4 crew, seed 1: 71 labels (6 viral, 2 respiratory, 15 EVA, 10 sleep shift, 12 solar, 16 sensor fault, 10 missing), 28 events, 31 bad readings. Counts are in the module docstring.
+
+## B05 · Evaluation metrics
+
+- Import from `orbit.evaluation`: `alerts`, `episodes`, `sensitivity`, `lead_times`, `summary`, `false_alarms`, `evaluate`, `Episode`, `FalseAlarmReport`, `CONFOUNDER_SCENARIOS`, `FAULT_SCENARIOS`. Pure: no I/O, no clock.
+- `evaluate(assessments, labels, min_level=AlertLevel.YELLOW, astronaut_days=None) -> dict`; keys documented in `orbit/evaluation/metrics.py`. `min_level` also takes "orange" etc.; `astronaut_days=None` counts distinct (astronaut, UTC date) assessed.
+- Keys: `sensitivity`, `detected`, `lead_times`, `lead_time` {n, median, min, max}, `false_alarms` {count, per_30_days, confounder_count, fault_count}, `confounder_alert_rate`, `by_scenario` {type: {labels, alerted, rate}}, plus counts. Nothing is rounded.
+- `None` (not an error) when there are no labels of that kind; `per_30_days` is `None` when `astronaut_days` is 0.
+- Windows are `label.window()`, both ends included; an alert episode overlapping any illness window of the same astronaut is not a false alarm, even inside a confounder window.
+- Lead time is exact (SPEC): symptom onset 07:00, assessment 10:00, so the day before = 0.875 and symptom day = -0.125.
+- Decision for B06: report lead time in whole calendar days as the headline number in the printed table (symptom day = 0, the day before = 1, i.e. `(symptom_onset.date() - first_alert.assessed_at.date()).days` in UTC), and keep the exact SPEC value in the JSON next to it.
+- A solar event gives one label per astronaut, so it counts 4 times in `by_scenario` and `confounder_alert_rate`.
+- `Episode` here is an alert run, not the simulator's illness `Episode`; import by module.
+- Starter modules, default 180 d x 4 crew, seed 1: sensitivity 1.0 (8/8), lead time median 0.375 d (-0.125 to 1.875), 0 false alarms.
