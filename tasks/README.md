@@ -67,7 +67,7 @@ every API task edits `orbit/api/app.py`.
 | Done | ID | Task | Lane | Needs | Size |
 |---|---|---|---|---|---|
 | [x] | [B01](B01-scenario-labels.md) | Scenario labels schema | Simulator | none | S |
-| [ ] | [B02](B02-simulator-healthy.md) | Simulator v1: healthy crew | Simulator | B01 | M |
+| [x] | [B02](B02-simulator-healthy.md) | Simulator v1: healthy crew | Simulator | B01 | M |
 | [ ] | [B03](B03-simulator-illness.md) | Simulator v2: illness episodes and labels | Simulator | B02 | M |
 | [ ] | [B04](B04-simulator-lookalikes.md) | Simulator v3: look-alikes and sensor faults | Simulator | B03 | M |
 | [ ] | [B05](B05-evaluation-metrics.md) | Evaluation metrics | Evaluation | B01 | S |

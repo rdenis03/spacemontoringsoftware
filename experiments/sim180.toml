@@ -1,0 +1,51 @@
+# ORBIT experiment: a 180-day simulated mission (M2 simulator).
+# A copy of orbit.toml with the `files` source replaced by the simulator.
+# Run:  python -m orbit --config experiments/sim180.toml demo
+# Paths are relative to THIS file, so "../" points at the project root.
+# Never use the `files` source and the simulator in one config (IDs would clash).
+
+[mission]
+name = "ORBIT simulated mission (180 days)"
+# The daily assessment runs after the night's wearable data and the morning check-in.
+assessment_hour_utc = 10
+
+[storage]
+# Its own database, so the normal data/orbit.db stays clean.
+database = "../data/sim180.db"
+
+[pipeline]
+baseline_window_days = 14   # days of history that define "your normal"
+recent_days = 3             # days compared against that normal
+event_lookback_days = 7     # how far back stress events count
+
+# ---- Module slots ---------------------------------------------------------
+
+[modules.baseline]          # M6
+use = "rolling_median"
+min_samples = 5
+
+[modules.detector]          # M7
+use = "robust_z"
+threshold = 2.5
+drift_threshold = 1.5
+drift_days = 2
+
+[modules.scorer]            # M8
+use = "rule_based"
+
+[modules.actions]           # M10
+use = "card_library"
+cards_path = "../examples/action_cards.jsonl"
+
+[modules.sync]              # M13
+use = "consent_gate"
+
+# ---- Data sources -----------------------------------------------------------
+
+[[sources]]
+use = "simulator"
+days = 180
+crew_size = 4
+seed = 1
+mission_start = "2027-01-04T00:00:00Z"
+labels_path = "../data/sim/labels.jsonl"   # written once B03 adds labels
