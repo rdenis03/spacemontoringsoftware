@@ -1,4 +1,4 @@
-"""Tests for the learned scorer (B08) with its placeholder weights."""
+"""Tests for the learned scorer (B08) with the shipped weights (trained by B09)."""
 
 import json
 from pathlib import Path
@@ -47,7 +47,7 @@ def test_same_input_same_output_and_version(ctx):
     second = LearnedScorer().score(ctx, anomalies)
     assert first.score == second.score and first.contributors == second.contributors
     assert first.model_version.startswith("learned-")
-    assert first.model_version == "learned-placeholder-1"
+    assert first.model_version == f"learned-{load_weights(DEFAULT_WEIGHTS)[0]}"[:32]
     assert first.assessed_at == ctx.as_of and first.astronaut_id == "AST-01"
 
 
@@ -65,12 +65,16 @@ def test_features_of_one_signal_become_one_reason(ctx):
     assert skin.label.startswith("Skin temperature")
 
 
-def test_placeholder_weights_cover_every_feature():
+def test_shipped_weights_cover_every_feature():
+    # B09 replaced the placeholder weights with trained ones: check the format, not the values.
     version, scale, weights = load_weights(DEFAULT_WEIGHTS)
-    assert version == "placeholder-1" and scale == 1.0
+    assert version.startswith("trained-") and scale == 1.0
+    assert len(f"learned-{version}") <= 32, "model_version must not be cut"
     assert list(weights) == list(FEATURE_NAMES)
-    assert weights["dev:skin_temp"] == 2.5 and weights["dev:sleep_duration"] == 1.5
-    assert weights["sym:symptom_rash_tingling"] == 7.0 and weights["crp:high"] == 8.0
+    assert all(w >= 0 for w in weights.values())
+    assert weights["dev:skin_temp"] > 0 and weights["crp:high"] > 0
+    trained_on = json.loads(DEFAULT_WEIGHTS.read_text(encoding="utf-8"))["trained_on"]
+    assert not set(trained_on["seeds"]) & set(range(101, 106)), "101-105 are held out for B10"
 
 
 def test_negative_weight_is_refused(tmp_path):
@@ -108,7 +112,9 @@ def test_score_is_capped_at_100(tmp_path, ctx):
     assert sum(c.points for c in result.contributors) > 100
 
 
-def test_learned_config_keeps_the_demo_story():
+def test_learned_config_alerts_on_the_demo_story():
+    # With the trained weights (B09) AST-01 is red on days 89 and 90, not yellow then
+    # orange. orbit.toml keeps rule_based and the pinned story; B10 decides on the switch.
     settings = load_settings(ROOT / "experiments" / "learned.toml")
     assert settings.modules["scorer"].use == "learned"
     assert load_settings(ROOT / "orbit.toml").modules["scorer"].use == "rule_based", \
@@ -118,5 +124,6 @@ def test_learned_config_keeps_the_demo_story():
         pipeline.ingest(create("source", choice.use, **choice.options))
     day89 = pipeline.assess("AST-01", DAY_89, save=False).assessment
     day90 = pipeline.assess("AST-01", DAY_90, save=False).assessment
-    assert (day89.level, day90.level) == (AlertLevel.YELLOW, AlertLevel.ORANGE)
+    assert day89.level.rank >= AlertLevel.YELLOW.rank
+    assert day90.level.rank >= AlertLevel.YELLOW.rank and day90.score >= day89.score
     assert pipeline.assess("AST-02", DAY_90, save=False).assessment.level is AlertLevel.GREEN

@@ -164,3 +164,18 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - Import cycle: `orbit.learning.features` imports `orbit.modules.scorer`, which loads every module. `scorer_learned.py` imports B07's features inside functions; never import `orbit.learning` at the top of a file in `orbit/modules/`.
 - `pyproject.toml` ships `learning/*.json` as package data (checked: the wheel contains `orbit/learning/weights.json`).
 - B10: `python -m orbit.evaluation --config orbit.toml --config experiments/learned.toml` already runs.
+
+## B09 · Train the scorer on simulated missions
+
+- `python -m orbit.learning.train --seeds 1-20 --days 180 --crew 4 --out orbit/learning/weights.json [--config orbit.toml]` (about 35 s), after `pip install -e ".[dev,train]"`. Only `train.py` imports scikit-learn.
+- `orbit.learning.train`: `train(seeds, days=180, crew=4, out=, config=) -> dict` (the written document), `dataset(seeds, days, crew, config) -> (X, y)`, `fit(X, y) -> dict`, `parse_seeds("1-3,7")`, `seeds_label(seeds)`.
+- `--config` picks the baseline, detector and pipeline settings that make the features; its sources are ignored. Retrain if the baseline or detector changes.
+- Seeds 101-105 raise `ValueError` (`HELD_OUT_SEEDS`): B10 evaluates on them.
+- Shipped weights: version `trained-s1-20-d180-c4`, file `scale` 1.0 (weights are already points), 12,720 astronaut-days, 1,810 ill, training AUC 0.90. `trained_on` also lists `dropped_features`, `unseen_features`, `intercept`, `points_per_logit`.
+- Biggest weights: CRP 48, viral DNA about 40 per unit, resp rate 18.4 and skin temp 17.4 per deviation unit. Dropped (negative): `vitals_moving`, `event:eva`, `dev:spo2`, both sleep `dev:*`, 5 `drift:*`, `sym:symptom_swollen_glands`.
+- Same arguments give a byte-identical file (LF line ends) with the same scikit-learn version (1.9.1 here).
+- The tiny test run uses seed 2: seed 1 has no illness in 40 days x 2 crew, and training stops with "needs both ill and healthy days".
+- Demo story with `experiments/learned.toml` changed: AST-01 is red on days 89 and 90 (100 on day 90), AST-02 green. `orbit.toml` (rule_based) is unchanged: yellow, then orange 70.2.
+- `tests/test_scorer_learned.py` (B08) was updated with the team's agreement: it checks the weights format, not placeholder values, and only that AST-01 alerts on days 89-90.
+- B10, first look on seeds 101-105 (180 d x 4 crew): learned sensitivity 1.00, lead 1.0 day, 0.17 false alarms / 30 d, confounder alert rate 0.28; rule_based 1.00, 0.1 day, 0.00, 0.14. Earlier warning, more false alarms, and a red/red demo: the team decides before switching.
+- B20: the stage script relies on rule_based points; revisit only if B10 switches the scorer.
