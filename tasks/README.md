@@ -70,7 +70,7 @@ every API task edits `orbit/api/app.py`.
 | [x] | [B02](B02-simulator-healthy.md) | Simulator v1: healthy crew | Simulator | B01 | M |
 | [x] | [B03](B03-simulator-illness.md) | Simulator v2: illness episodes and labels | Simulator | B02 | M |
 | [x] | [B04](B04-simulator-lookalikes.md) | Simulator v3: look-alikes and sensor faults | Simulator | B03 | M |
-| [ ] | [B05](B05-evaluation-metrics.md) | Evaluation metrics | Evaluation | B01 | S |
+| [x] | [B05](B05-evaluation-metrics.md) | Evaluation metrics | Evaluation | B01 | S |
 | [ ] | [B06](B06-evaluation-runner.md) | Evaluation runner and CLI | Evaluation | B04, B05 | M |
 | [x] | [B07](B07-scorer-features.md) | Feature extraction for the AI scorer | AI | none | S |
 | [ ] | [B08](B08-learned-scorer.md) | Learned scorer module (placeholder weights) | AI | B07 | S |
