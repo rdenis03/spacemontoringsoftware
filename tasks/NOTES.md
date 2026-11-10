@@ -47,3 +47,16 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - Labels match `rule_based` exactly; `features.py` imports the private `_days_label` from `orbit/modules/scorer.py`, so do not rename it.
 - Constants `MAX_DEVIATION=3`, `VIRAL_DETECTION_LIMIT=100`, `CRP_LIMIT=10` live in `features.py`, copied from rule_based defaults, not linked to them.
 - AST-01 day 90 gives 16 features; AST-02 day 90 has no `dev:*` or `sym:*`.
+
+## B03 · Simulator v2: illness episodes and labels
+
+- `MissionSimulator(...).read()` and `.labels()` unchanged in shape; `labels()` gives one `ScenarioLabel` per episode, and `read()` writes them when `labels_path` is set.
+- Default `scenarios="random"` now injects illnesses; pass `scenarios=[]` for a healthy crew (the two B02 healthy tests do).
+- `sim.episodes`: `Episode` objects sorted by symptom day, each also in `sim.effects`. Fields `scenario, astronaut_id, symptom_day, lead_days, recovery_days, virus, ...`; `first_day`, `last_day`, `extra_labs(day, weekly)`, `label(day_start)`.
+- Inline tables: `type`, `astronaut`, `symptom_day` required; `virus` for viral; optional `lead_days` (1-3; default 2 viral, 1 respiratory), `recovery_days` (5-10). Bad tables raise `ValueError`.
+- Random: Poisson `illness_rate * days / 90` per astronaut, 70 % viral; nothing before day 22, whole episode inside the mission, 7 days apart per astronaut.
+- Labels: `onset` = 00:00 of first vitals day (not the day -3 DNA rise); `symptom_onset` = day 0 at 07:00; `resolved` = 00:00 of day 0 + `recovery_days`.
+- Extra-test rule: extra 09:00 lab tests run only from symptom day (day 0) to the end of recovery, never before; viral = that virus's DNA on non-weekly days, respiratory = CRP. IDs end in `-09`. Before day 0 the DNA rise shows only on weekly tests.
+- B09: extra tests only happen during illness, so the presence of a test gives the answer away. Learn from test values only, never from whether a test exists.
+- B04: add look-alikes to `sim.effects`; draw their randomness from a new generator (or after the episode seed) so existing values stay identical.
+- Starter modules on VZV, symptom day 40: green 24.9 on day -1, orange on day 0. The warning comes on symptom day, not before; a stronger ramp or B08-B10 could make it earlier.
