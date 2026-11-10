@@ -31,6 +31,10 @@ DEFAULT_MODULES: dict[str, str] = {
 }
 
 
+AUTO_SEND_LEVELS = ("off", "yellow", "orange", "red")
+"""Allowed values of ``[comms] auto_send_level`` (B18)."""
+
+
 class ConfigError(ValueError):
     pass
 
@@ -53,6 +57,9 @@ class Settings:
     event_lookback_days: int = 7
     #: [comms] one_way_delay_minutes: delay to Earth for queued packets (M13, B16).
     comms_delay_minutes: float = 20.0
+    #: [comms] auto_send_level: ORBIT queues a packet for Earth by itself when an
+    #: astronaut reaches this level ("yellow", "orange" or "red"); "off" disables it (B18).
+    comms_auto_send_level: str = "orange"
     modules: dict[str, ModuleChoice] = field(
         default_factory=lambda: {slot: ModuleChoice(name) for slot, name in DEFAULT_MODULES.items()}
     )
@@ -135,6 +142,7 @@ def load_settings(path: str | Path | None = None) -> Settings:
         recent_days=int(pipeline.get("recent_days", 3)),
         event_lookback_days=int(pipeline.get("event_lookback_days", 7)),
         comms_delay_minutes=float(comms.get("one_way_delay_minutes", 20.0)),
+        comms_auto_send_level=str(comms.get("auto_send_level", "orange")).lower(),
         modules=modules,
         sources=sources,
         config_path=config_path.resolve(),
@@ -144,5 +152,7 @@ def load_settings(path: str | Path | None = None) -> Settings:
             raise ConfigError(f"pipeline.{name} must be at least 1")
     if not 0 <= settings.comms_delay_minutes <= 24 * 60:
         raise ConfigError("comms.one_way_delay_minutes must be between 0 and 1440")
+    if settings.comms_auto_send_level not in AUTO_SEND_LEVELS:
+        raise ConfigError("comms.auto_send_level must be one of: " + ", ".join(AUTO_SEND_LEVELS))
     assert set(SLOTS) >= set(settings.modules)
     return settings
