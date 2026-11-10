@@ -71,12 +71,15 @@ python -m orbit.schema validate my.jsonl # check a data file against the schema
 | GET | `/api/signals` | labels, units, scales, alert thresholds |
 | GET | `/api/crew` | crew list |
 | GET | `/api/overview` | crew view (M14): latest level per astronaut |
-| GET | `/api/crew/{id}/status` | dashboard (M12): level, reasons, actions, anomalies |
+| GET | `/api/crew/{id}/status` | dashboard (M12): level, reasons, actions, anomalies; `?view=shared` hides private reasons (crew view, M14) |
 | GET | `/api/crew/{id}/observations?signal=&start=&end=` | charts |
 | GET | `/api/crew/{id}/baselines?signal=` | "your normal" band |
 | GET | `/api/crew/{id}/assessments` | score trend line |
 | POST | `/api/crew/{id}/checkin` | check-in form (M11); re-assesses immediately |
 | GET | `/api/crew/{id}/earth-packet?start=&end=` | what would go to Earth (M13) |
+| POST | `/api/crew/{id}/earth-packet/send?start=&end=&delay_minutes=` | package and queue for Earth; delay defaults to `[comms]` (M13) |
+| PUT | `/api/crew/{id}/consent` | body `{"share_with_earth": ["vital", ...]}`: what leaves the spacecraft (M13) |
+| GET | `/api/outbox?astronaut_id=` | everything sent, `queued` or `delivered`, with seconds to delivery (M13) |
 | GET | `/api/events` | solar events, spacewalks |
 | POST | `/api/observations` | devices and feeds pushing readings |
 | POST | `/api/pipeline/run` | re-run assessments |

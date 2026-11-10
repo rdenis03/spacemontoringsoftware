@@ -8,7 +8,10 @@ import type {
   ContextEvent,
   CrewMember,
   DayResult,
+  EarthPacket,
+  Health,
   Observation,
+  OutboxItem,
   OverviewRow,
   RiskAssessment,
   SignalRegistry,
@@ -96,7 +99,32 @@ export const api = {
   /** Latest level and score per astronaut (crew view). */
   overview: (signal?: AbortSignal) => request<OverviewRow[]>("/api/overview", { signal }),
 
-  status: (id: string, signal?: AbortSignal) => request<DayResult>(`${crewPath(id)}/status`, { signal }),
+  health: (signal?: AbortSignal) => request<Health>("/api/health", { signal }),
+
+  /** Latest result; `view: "shared"` is the crew's view with private reasons hidden (M14). */
+  status: (id: string, signal?: AbortSignal, view?: "shared") =>
+    request<DayResult>(`${crewPath(id)}/status`, { signal, query: { view } }),
+
+  /** What would be sent to Earth for a period, after the consent filter (M13). */
+  earthPacket: (id: string, start: string, end: string, signal?: AbortSignal) =>
+    request<EarthPacket>(`${crewPath(id)}/earth-packet`, { signal, query: { start, end } }),
+
+  /** Package a period and queue it for Earth; `delayMinutes` overrides [comms] in orbit.toml. */
+  sendPacket: (id: string, start: string, end: string, delayMinutes?: number) =>
+    request<OutboxItem>(`${crewPath(id)}/earth-packet/send`, {
+      method: "POST",
+      query: { start, end, delay_minutes: delayMinutes === undefined ? undefined : String(delayMinutes) },
+    }),
+
+  outbox: (astronautId?: string, signal?: AbortSignal) =>
+    request<OutboxItem[]>("/api/outbox", { signal, query: { astronaut_id: astronautId } }),
+
+  /** Set the categories shared with Earth. */
+  consent: (id: string, categories: string[]) =>
+    request<CrewMember>(`${crewPath(id)}/consent`, {
+      method: "PUT",
+      body: JSON.stringify({ share_with_earth: categories } satisfies { share_with_earth: string[] }),
+    }),
 
   /** Readings; an empty `signals` list means every signal. */
   observations: (id: string, signals: string[], signal?: AbortSignal, start?: string) =>

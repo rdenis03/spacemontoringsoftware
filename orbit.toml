@@ -15,6 +15,10 @@ baseline_window_days = 14   # days of history that define "your normal"
 recent_days = 3             # days compared against that normal
 event_lookback_days = 7     # how far back stress events count
 
+[comms]                     # M13
+# One-way delay for packets queued to Earth: Moon about 0.02 (1.3 s), Mars 3-22.
+one_way_delay_minutes = 20
+
 # ---- Module slots ---------------------------------------------------------
 # Change `use` to switch implementation. `python -m orbit modules` lists them.
 

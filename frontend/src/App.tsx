@@ -5,6 +5,7 @@ import { formatClock } from "./lib/format";
 import { useAsync } from "./lib/useAsync";
 import CheckinPage from "./routes/checkin/CheckinPage";
 import CrewPage from "./routes/crew/CrewPage";
+import EarthPage from "./routes/earth/EarthPage";
 import DashboardPage from "./routes/dashboard/DashboardPage";
 import { useAstronaut } from "./state/astronaut";
 import { RegistryProvider } from "./state/registry";
@@ -77,6 +78,7 @@ function Shell() {
             </NavLink>
             <NavLink to={{ pathname: "/checkin", search }}>Check-in</NavLink>
             <NavLink to={{ pathname: "/crew", search }}>Crew</NavLink>
+            <NavLink to={{ pathname: "/earth", search }}>Earth</NavLink>
           </nav>
           <div className="app-header__tools">
             <div className="clock">
@@ -104,6 +106,7 @@ function Shell() {
           <Route path="/" element={<DashboardPage astronautId={astronaut} status={status} />} />
           <Route path="/checkin" element={<CheckinPage astronautId={astronaut} status={status} />} />
           <Route path="/crew" element={<CrewPage freshness={status.data?.as_of ?? ""} />} />
+          <Route path="/earth" element={<EarthPage astronautId={astronaut} status={status} />} />
           <Route path="*" element={<Navigate to={{ pathname: "/", search }} replace />} />
         </Routes>
       </main>

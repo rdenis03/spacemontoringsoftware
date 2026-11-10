@@ -79,7 +79,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Status */
+        /**
+         * Status
+         * @description Latest result. ``view=shared`` is what crewmates see (M14): the assessment goes
+         *     through the consent gate, so reasons from private categories show a neutral
+         *     label, and anomalies and baselines of private signals are left out.
+         */
         get: operations["status_api_crew__astronaut_id__status_get"];
         put?: never;
         post?: never;
@@ -166,6 +171,66 @@ export interface paths {
         };
         /** Earth Packet */
         get: operations["earth_packet_api_crew__astronaut_id__earth_packet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/crew/{astronaut_id}/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Consent
+         * @description Change what leaves the spacecraft. Applies to packets built from now on.
+         */
+        put: operations["consent_api_crew__astronaut_id__consent_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/crew/{astronaut_id}/earth-packet/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Earth Packet
+         * @description Package the period through the consent gate and queue it for Earth.
+         */
+        post: operations["send_earth_packet_api_crew__astronaut_id__earth_packet_send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/outbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Outbox
+         * @description Everything sent to Earth, newest first, with its delivery status now.
+         */
+        get: operations["outbox_api_outbox_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -369,6 +434,23 @@ export interface components {
             stress?: number | null;
             /** Note */
             note?: string | null;
+        };
+        /**
+         * ConsentUpdate
+         * @description The categories the astronaut shares with Earth. Anything else stays onboard.
+         */
+        ConsentUpdate: {
+            /**
+             * Share With Earth
+             * @description Categories sent to Earth; symptoms and wellbeing are private unless listed.
+             * @example [
+             *       "vital",
+             *       "sleep",
+             *       "lab",
+             *       "context"
+             *     ]
+             */
+            share_with_earth: components["schemas"]["SignalCategory"][];
         };
         /**
          * ContextEvent
@@ -597,6 +679,63 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /**
+         * OutboxItem
+         * @description A queued packet as the frontend sees it: the entry plus its live delivery status.
+         */
+        OutboxItem: {
+            /** Packet Id */
+            packet_id: string;
+            /** Astronaut Id */
+            astronaut_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Deliver At
+             * Format: date-time
+             */
+            deliver_at: string;
+            /** Delay Minutes */
+            delay_minutes: number;
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /**
+             * End
+             * Format: date-time
+             */
+            end: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "delivered";
+            /**
+             * Seconds To Delivery
+             * @description 0 once delivered.
+             */
+            seconds_to_delivery: number;
+            /**
+             * Sent
+             * @description Readings sent, per category.
+             */
+            sent: {
+                [key: string]: number;
+            };
+            /**
+             * Withheld
+             * @description Readings kept onboard, per category.
+             */
+            withheld: {
+                [key: string]: number;
+            };
+            packet: components["schemas"]["EarthPacket"];
+        };
         /** OverviewRow */
         OverviewRow: {
             /** Astronaut Id */
@@ -798,7 +937,9 @@ export interface operations {
     };
     status_api_crew__astronaut_id__status_get: {
         parameters: {
-            query?: never;
+            query?: {
+                view?: "full" | "shared";
+            };
             header?: never;
             path: {
                 astronaut_id: string;
@@ -988,6 +1129,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EarthPacket"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    consent_api_crew__astronaut_id__consent_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                astronaut_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrewMember"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_earth_packet_api_crew__astronaut_id__earth_packet_send_post: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+                /** @description One-way delay for this packet; default from [comms] in orbit.toml. */
+                delay_minutes?: number | null;
+            };
+            header?: never;
+            path: {
+                astronaut_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutboxItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    outbox_api_outbox_get: {
+        parameters: {
+            query?: {
+                astronaut_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutboxItem"][];
                 };
             };
             /** @description Validation Error */

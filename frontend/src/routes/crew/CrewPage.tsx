@@ -1,13 +1,17 @@
 /**
- * M14 crew view (grid): every astronaut's latest level and score, worst
- * first, with a 14-day score line, the top reason, the last check-in and
- * who the action cards escalate to.
+ * M14 crew and medical officer view: every astronaut's latest level and
+ * score, worst first, with a 14-day score line, the top reason, the last
+ * check-in and who the action cards escalate to; "View shared status"
+ * opens the detail.
  *
- * Data: GET /api/overview, then per astronaut /assessments, /status and the
- * symptom readings (for the last check-in time). The privacy-filtered
- * detail view (`/status?view=shared`) is still to come from the backend;
- * "Open dashboard" opens the full dashboard in this demo.
+ * Privacy: everything here comes from the shared view
+ * (GET /status?view=shared), so reasons from categories an astronaut keeps
+ * private arrive as a neutral label. Score and level are always visible.
+ *
+ * Data: GET /api/overview, then per astronaut /assessments, /status?view=shared
+ * and the symptom readings (only their time, for "last check-in").
  */
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { DayResult, RiskAssessment } from "../../api/types";
@@ -38,6 +42,7 @@ interface CrewEntry {
 export default function CrewPage({ freshness }: { freshness: string }) {
   const { crew, registry } = useRegistry();
   const symptomSignals = registry.signals.filter((s) => s.category === "symptom").map((s) => s.signal);
+  const [selected, setSelected] = useState<string | null>(null);
 
   const data = useAsync(
     async (abort) => {
@@ -47,7 +52,7 @@ export default function CrewPage({ freshness }: { freshness: string }) {
           const row = overview.find((r) => r.astronaut_id === m.astronaut_id);
           const [history, status, checkins] = await Promise.all([
             api.assessments(m.astronaut_id, abort),
-            api.status(m.astronaut_id, abort).catch(() => null),
+            api.status(m.astronaut_id, abort, "shared").catch(() => null),
             api.observations(m.astronaut_id, symptomSignals, abort),
           ]);
           const last = checkins.reduce<string | null>((acc, o) => (!acc || o.timestamp > acc ? o.timestamp : acc), null);
@@ -76,6 +81,7 @@ export default function CrewPage({ freshness }: { freshness: string }) {
     (a, b) => levelRank(b.level ?? "green", order) - levelRank(a.level ?? "green", order) || (b.score ?? 0) - (a.score ?? 0),
   );
   const day = entries[0]?.status?.mission_day;
+  const open = entries.find((e) => e.id === selected);
 
   return (
     <div className="crew enter">
@@ -99,18 +105,30 @@ export default function CrewPage({ freshness }: { freshness: string }) {
 
       <ul className="crew__grid">
         {entries.map((e) => (
-          <CrewCard key={e.id} entry={e} />
+          <CrewCard
+            key={e.id}
+            entry={e}
+            open={e.id === selected}
+            onToggle={() => setSelected((cur) => (cur === e.id ? null : e.id))}
+          />
         ))}
       </ul>
+
+      {open && <SharedDetail entry={open} onClose={() => setSelected(null)} />}
     </div>
   );
 }
 
-function CrewCard({ entry }: { entry: CrewEntry }) {
+/** A reason without a signal or an event was redacted by the consent gate. */
+const isPrivate = (c: { signal?: string | null; event_id?: string | null }) => !c.signal && !c.event_id;
+const PRIVATE_TEXT = "Private reason";
+
+function CrewCard({ entry, open, onToggle }: { entry: CrewEntry; open: boolean; onToggle: () => void }) {
   const { registry } = useRegistry();
   const level = entry.level ?? "none";
   const recent = entry.history.slice(-14);
-  const top = entry.status?.assessment?.contributors?.[0]?.label ?? "Nothing raised the score";
+  const first = entry.status?.assessment?.contributors?.[0];
+  const top = first ? (isPrivate(first) ? PRIVATE_TEXT : first.label) : "Nothing raised the score";
   const escalations = [
     ...new Set((entry.status?.actions ?? []).map((c) => c.escalate_to ?? "self").filter((t) => t !== "self")),
   ].map((t) => humanize(t));
@@ -169,13 +187,23 @@ function CrewCard({ entry }: { entry: CrewEntry }) {
         </div>
       </dl>
 
-      <Link className="btn btn-secondary crew-card__open" to={{ pathname: "/", search: `?astronaut=${encodeURIComponent(entry.id)}` }}>
-        Open dashboard
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-          <path d="M5 12h14" />
-          <path d="m12 5 7 7-7 7" />
-        </svg>
-      </Link>
+      <div className="crew-card__actions">
+        <button
+          type="button"
+          className="btn btn-secondary crew-card__open"
+          aria-expanded={open}
+          aria-controls="crew-detail"
+          onClick={onToggle}
+        >
+          {open ? "Hide shared status" : "View shared status"}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <path d={open ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"} />
+          </svg>
+        </button>
+        <Link className="btn btn-ghost" to={{ pathname: "/", search: `?astronaut=${encodeURIComponent(entry.id)}` }}>
+          Dashboard
+        </Link>
+      </div>
     </Frame>
   );
 }
@@ -206,5 +234,90 @@ function ScoreLine({ points, thresholds }: { points: RiskAssessment[]; threshold
         strokeWidth={1}
       />
     </svg>
+  );
+}
+
+/** What crewmates and the medical officer see: private reasons stay hidden. */
+function SharedDetail({ entry, onClose }: { entry: CrewEntry; onClose: () => void }) {
+  const status = entry.status;
+  const assessment = status?.assessment;
+  const level = assessment?.level ?? "green";
+  const reasons = assessment?.contributors ?? [];
+  const hidden = reasons.filter(isPrivate).length;
+
+  return (
+    <Frame as="section" id="crew-detail" className="crew-detail" aria-labelledby="crew-detail-title">
+      <div className="section-head">
+        <div>
+          <span className="kicker">Shared status · {entry.id}</span>
+          <h2 id="crew-detail-title" className="crew-detail__title">
+            {entry.callsign}
+          </h2>
+        </div>
+        <button type="button" className="btn btn-ghost" onClick={onClose}>
+          Close
+        </button>
+      </div>
+      {!assessment ? (
+        <p className="secondary">No assessment yet.</p>
+      ) : (
+        <div className="crew-detail__body">
+          <div className="crew-detail__status">
+            <LevelIcon level={level} size={30} />
+            <div>
+              <p className="crew-detail__word" style={{ color: levelInk(level) }}>
+                {levelCopy(level).word}
+              </p>
+              <p className="secondary">
+                Score {formatNumber(assessment.score, 0)} / 100 · mission day {status?.mission_day}
+              </p>
+            </div>
+          </div>
+          <section aria-labelledby="crew-detail-reasons">
+            <h3 id="crew-detail-reasons" className="section-label">
+              Reasons
+            </h3>
+            {reasons.length === 0 ? (
+              <p className="secondary">Nothing raised the score.</p>
+            ) : (
+              <ol className="crew-detail__reasons">
+                {reasons.map((c, i) => (
+                  <li key={`${c.label}-${i}`} className={isPrivate(c) ? "crew-detail__private" : undefined}>
+                    <span className="numbered__n data">{String(i + 1).padStart(2, "0")}</span>
+                    <span>{isPrivate(c) ? `${PRIVATE_TEXT} (not shared by ${entry.callsign})` : c.label}</span>
+                    <span className="secondary data">{formatNumber(c.points, 1)} pts</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+            {hidden > 0 && (
+              <p className="crew-detail__note">
+                {hidden} reason{hidden === 1 ? " is" : "s are"} private. Their points still count in the score.
+              </p>
+            )}
+          </section>
+          <section aria-labelledby="crew-detail-cards">
+            <h3 id="crew-detail-cards" className="section-label">
+              Action cards
+            </h3>
+            {(status?.actions ?? []).length === 0 ? (
+              <p className="secondary">No action cards.</p>
+            ) : (
+              <ul className="crew-detail__cards">
+                {(status?.actions ?? []).map((card) => (
+                  <li key={card.card_id}>
+                    <span className="crew-detail__card-title">{card.title}</span>
+                    <LevelTag level={card.level} />
+                    <span className="crew-detail__esc">
+                      {(card.escalate_to ?? "self") === "self" ? "Handled by the astronaut" : `Escalates to ${humanize(card.escalate_to!).toLowerCase()}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      )}
+    </Frame>
   );
 }

@@ -35,7 +35,8 @@ The API address defaults to `http://localhost:8000`; set `VITE_API_URL` to chang
 |---|---|---|
 | `/` | M12 dashboard | **Today**: status column with a vertical score meter and change vs yesterday, contributor cards (points, "your normal" band, score without it), action cards with progress. **Trends**: every sensor in a list (state, value, sparkline over the normal) and the chosen sensor on coloured zones in a sticky frame. **History**: score on level bands, early warning (alert day vs first symptom), mission replay slider. |
 | `/checkin` | M11 check-in | 8 symptoms preset to "none", optional mood, stress and note; a sticky "Review & save" panel with the mission-time stamp. Shows the new status, score before → after, top reasons and cards. Keeps the answers on failure; lists 422 messages. |
-| `/crew` | M14 crew grid | Every astronaut worst first: level, score, 14-day score line, top reason, last check-in, escalation. The privacy-filtered detail (`?view=shared`) waits on the backend. |
+| `/crew` | M14 crew view | Every astronaut worst first: level, score, 14-day score line, top reason, last check-in, escalation; "View shared status" opens the detail. All of it comes from `/status?view=shared`, so private reasons show as "Private reason". |
+| `/earth` | M13 Earth comms | Consent switch per category, what Earth would receive (score and level always, private reasons hidden, readings sent vs kept onboard), send over a Moon (1.3 s) or Mars (`[comms]`) link, outbox with a live countdown. |
 
 The astronaut, tab and signal live in the URL (`?astronaut=AST-01&tab=trends&signal=skin_temp`).
 

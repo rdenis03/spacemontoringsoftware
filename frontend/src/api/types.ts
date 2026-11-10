@@ -26,6 +26,19 @@ export type CrewMember = Schemas["CrewMember"];
 export type CheckIn = Schemas["CheckIn"];
 export type ValidationError = Schemas["ValidationError"];
 export type OverviewRow = Schemas["OverviewRow"];
+export type EarthPacket = Schemas["EarthPacket"];
+export type OutboxItem = Schemas["OutboxItem"];
+export type ConsentUpdate = Schemas["ConsentUpdate"];
+
+/** `GET /api/health` is declared as a plain dict; this mirrors what it returns. */
+export interface Health {
+  status: string;
+  mission: string;
+  schema_version: string;
+  modules: Record<string, string>;
+  counts: Record<string, number>;
+  comms: { one_way_delay_minutes: number };
+}
 
 /** Mirrors `registry_document()` in orbit/schema/export.py. */
 export interface SignalSpec {
