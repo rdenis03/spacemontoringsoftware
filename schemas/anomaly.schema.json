@@ -1,0 +1,104 @@
+{
+  "$defs": {
+    "AnomalyKind": {
+      "enum": [
+        "spike",
+        "drift"
+      ],
+      "title": "AnomalyKind",
+      "type": "string"
+    },
+    "SignalType": {
+      "description": "Every health indicator the system understands.\n\nAdding a signal: add it here AND to the registry in ``signals.py``.\nA test fails if the two ever get out of sync.",
+      "enum": [
+        "skin_temp",
+        "resting_hr",
+        "hrv_rmssd",
+        "resp_rate",
+        "spo2",
+        "sleep_duration",
+        "sleep_efficiency",
+        "symptom_fatigue",
+        "symptom_fever_chills",
+        "symptom_sore_throat",
+        "symptom_swollen_glands",
+        "symptom_mouth_sores",
+        "symptom_rash_tingling",
+        "symptom_headache",
+        "symptom_muscle_aches",
+        "mood",
+        "stress",
+        "saliva_ebv_dna",
+        "saliva_vzv_dna",
+        "saliva_hsv1_dna",
+        "saliva_cortisol",
+        "wbc_count",
+        "crp",
+        "radiation_dose_daily",
+        "workload"
+      ],
+      "title": "SignalType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A reading that departs from the astronaut's personal baseline (from M7).",
+  "properties": {
+    "astronaut_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$",
+      "title": "Astronaut Id",
+      "type": "string"
+    },
+    "signal": {
+      "$ref": "#/$defs/SignalType"
+    },
+    "detected_at": {
+      "format": "date-time",
+      "title": "Detected At",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/AnomalyKind"
+    },
+    "value": {
+      "description": "The reading, or recent average for drift.",
+      "title": "Value",
+      "type": "number"
+    },
+    "baseline_center": {
+      "description": "Personal normal (e.g. median).",
+      "title": "Baseline Center",
+      "type": "number"
+    },
+    "baseline_spread": {
+      "description": "Personal variability (e.g. MAD).",
+      "minimum": 0,
+      "title": "Baseline Spread",
+      "type": "number"
+    },
+    "deviation": {
+      "description": "Signed distance from baseline in spread units (robust z-score).",
+      "title": "Deviation",
+      "type": "number"
+    },
+    "consecutive_days": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Consecutive Days",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "astronaut_id",
+    "signal",
+    "detected_at",
+    "kind",
+    "value",
+    "baseline_center",
+    "baseline_spread",
+    "deviation"
+  ],
+  "title": "Anomaly",
+  "type": "object",
+  "$id": "orbit/1.0.0/anomaly.schema.json"
+}

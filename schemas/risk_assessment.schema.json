@@ -1,0 +1,146 @@
+{
+  "$defs": {
+    "AlertLevel": {
+      "description": "Traffic-light status shown to the astronaut. Ordered from best to worst.",
+      "enum": [
+        "green",
+        "yellow",
+        "orange",
+        "red"
+      ],
+      "title": "AlertLevel",
+      "type": "string"
+    },
+    "Contributor": {
+      "additionalProperties": false,
+      "description": "One reason behind a risk score, shown in the dashboard's 'why' panel.",
+      "properties": {
+        "label": {
+          "description": "Plain-language reason, e.g. 'Skin temp +0.4 °C above your normal for 2 nights'.",
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "points": {
+          "description": "How much this adds to the score.",
+          "minimum": 0,
+          "title": "Points",
+          "type": "number"
+        },
+        "signal": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SignalType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Event Id"
+        }
+      },
+      "required": [
+        "label",
+        "points"
+      ],
+      "title": "Contributor",
+      "type": "object"
+    },
+    "SignalType": {
+      "description": "Every health indicator the system understands.\n\nAdding a signal: add it here AND to the registry in ``signals.py``.\nA test fails if the two ever get out of sync.",
+      "enum": [
+        "skin_temp",
+        "resting_hr",
+        "hrv_rmssd",
+        "resp_rate",
+        "spo2",
+        "sleep_duration",
+        "sleep_efficiency",
+        "symptom_fatigue",
+        "symptom_fever_chills",
+        "symptom_sore_throat",
+        "symptom_swollen_glands",
+        "symptom_mouth_sores",
+        "symptom_rash_tingling",
+        "symptom_headache",
+        "symptom_muscle_aches",
+        "mood",
+        "stress",
+        "saliva_ebv_dna",
+        "saliva_vzv_dna",
+        "saliva_hsv1_dna",
+        "saliva_cortisol",
+        "wbc_count",
+        "crp",
+        "radiation_dose_daily",
+        "workload"
+      ],
+      "title": "SignalType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Immune risk for one astronaut at one time (from M8).",
+  "properties": {
+    "assessment_id": {
+      "maxLength": 64,
+      "title": "Assessment Id",
+      "type": "string"
+    },
+    "astronaut_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$",
+      "title": "Astronaut Id",
+      "type": "string"
+    },
+    "assessed_at": {
+      "format": "date-time",
+      "title": "Assessed At",
+      "type": "string"
+    },
+    "score": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Score",
+      "type": "number"
+    },
+    "level": {
+      "$ref": "#/$defs/AlertLevel"
+    },
+    "contributors": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Contributor"
+      },
+      "title": "Contributors",
+      "type": "array"
+    },
+    "model_version": {
+      "default": "unversioned",
+      "maxLength": 32,
+      "title": "Model Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "astronaut_id",
+    "assessed_at",
+    "score",
+    "level"
+  ],
+  "title": "RiskAssessment",
+  "type": "object",
+  "$id": "orbit/1.0.0/risk_assessment.schema.json"
+}

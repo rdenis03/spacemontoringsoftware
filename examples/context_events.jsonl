@@ -1,0 +1,2 @@
+{"event_id":"sep-20270402","event_type":"solar_particle_event","start":"2027-04-02T14:00:00Z","end":"2027-04-03T02:00:00Z","severity":"moderate","astronaut_id":null,"source":"ground","external_id":"2027-04-02T14:00:00-SEP-001","description":"Solar particle event; crew sheltered for 3 hours.","simulated":true}
+{"event_id":"eva-20270401","event_type":"eva","start":"2027-04-01T08:00:00Z","end":"2027-04-01T15:00:00Z","severity":"moderate","astronaut_id":"AST-01","source":"manual","external_id":null,"description":"7-hour spacewalk.","simulated":true}

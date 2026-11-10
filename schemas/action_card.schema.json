@@ -1,0 +1,115 @@
+{
+  "$defs": {
+    "AlertLevel": {
+      "description": "Traffic-light status shown to the astronaut. Ordered from best to worst.",
+      "enum": [
+        "green",
+        "yellow",
+        "orange",
+        "red"
+      ],
+      "title": "AlertLevel",
+      "type": "string"
+    },
+    "EscalationTarget": {
+      "description": "Who should act on an action card.",
+      "enum": [
+        "self",
+        "crew_medical_officer",
+        "flight_surgeon"
+      ],
+      "title": "EscalationTarget",
+      "type": "string"
+    },
+    "SignalType": {
+      "description": "Every health indicator the system understands.\n\nAdding a signal: add it here AND to the registry in ``signals.py``.\nA test fails if the two ever get out of sync.",
+      "enum": [
+        "skin_temp",
+        "resting_hr",
+        "hrv_rmssd",
+        "resp_rate",
+        "spo2",
+        "sleep_duration",
+        "sleep_efficiency",
+        "symptom_fatigue",
+        "symptom_fever_chills",
+        "symptom_sore_throat",
+        "symptom_swollen_glands",
+        "symptom_mouth_sores",
+        "symptom_rash_tingling",
+        "symptom_headache",
+        "symptom_muscle_aches",
+        "mood",
+        "stress",
+        "saliva_ebv_dna",
+        "saliva_vzv_dna",
+        "saliva_hsv1_dna",
+        "saliva_cortisol",
+        "wbc_count",
+        "crp",
+        "radiation_dose_daily",
+        "workload"
+      ],
+      "title": "SignalType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A concrete thing the astronaut can do (from M10's protocol library).",
+  "properties": {
+    "card_id": {
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+      "title": "Card Id",
+      "type": "string"
+    },
+    "level": {
+      "$ref": "#/$defs/AlertLevel",
+      "description": "Lowest alert level at which this card applies."
+    },
+    "title": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "steps": {
+      "items": {
+        "maxLength": 200,
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Steps",
+      "type": "array"
+    },
+    "rationale": {
+      "maxLength": 400,
+      "minLength": 1,
+      "title": "Rationale",
+      "type": "string"
+    },
+    "escalate_to": {
+      "$ref": "#/$defs/EscalationTarget",
+      "default": "self"
+    },
+    "triggers": {
+      "default": [],
+      "description": "Signals that make this card relevant; empty = any.",
+      "items": {
+        "$ref": "#/$defs/SignalType"
+      },
+      "title": "Triggers",
+      "type": "array"
+    }
+  },
+  "required": [
+    "card_id",
+    "level",
+    "title",
+    "steps",
+    "rationale"
+  ],
+  "title": "ActionCard",
+  "type": "object",
+  "$id": "orbit/1.0.0/action_card.schema.json"
+}

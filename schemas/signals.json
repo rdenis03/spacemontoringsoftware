@@ -1,0 +1,537 @@
+{
+  "schema_version": "1.0.0",
+  "categories": [
+    "vital",
+    "sleep",
+    "symptom",
+    "wellbeing",
+    "lab",
+    "context"
+  ],
+  "default_shared_categories": [
+    "context",
+    "lab",
+    "sleep",
+    "vital"
+  ],
+  "alert_levels": [
+    {
+      "level": "green",
+      "min_score": 0.0
+    },
+    {
+      "level": "yellow",
+      "min_score": 25.0
+    },
+    {
+      "level": "orange",
+      "min_score": 50.0
+    },
+    {
+      "level": "red",
+      "min_score": 75.0
+    }
+  ],
+  "alert_level_order": [
+    "green",
+    "yellow",
+    "orange",
+    "red"
+  ],
+  "signals": [
+    {
+      "signal": "skin_temp",
+      "label": "Skin temperature",
+      "category": "vital",
+      "kind": "continuous",
+      "unit": "degC",
+      "unit_label": "°C",
+      "plausible_min": 28,
+      "plausible_max": 42,
+      "concern": "up",
+      "cadence": "nightly",
+      "description": "Mean distal skin temperature during sleep. A sustained rise above the personal baseline can precede fever.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "manual",
+        "wearable"
+      ]
+    },
+    {
+      "signal": "resting_hr",
+      "label": "Resting heart rate",
+      "category": "vital",
+      "kind": "continuous",
+      "unit": "bpm",
+      "unit_label": "bpm",
+      "plausible_min": 25,
+      "plausible_max": 200,
+      "concern": "up",
+      "cadence": "nightly",
+      "description": "Lowest stable heart rate during sleep. Rises during infection and stress.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "manual",
+        "wearable"
+      ]
+    },
+    {
+      "signal": "hrv_rmssd",
+      "label": "Heart rate variability",
+      "category": "vital",
+      "kind": "continuous",
+      "unit": "ms",
+      "unit_label": "ms",
+      "plausible_min": 3,
+      "plausible_max": 300,
+      "concern": "down",
+      "cadence": "nightly",
+      "description": "Nightly HRV (RMSSD). Drops when the body is fighting infection or under heavy stress.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "manual",
+        "wearable"
+      ]
+    },
+    {
+      "signal": "resp_rate",
+      "label": "Respiratory rate",
+      "category": "vital",
+      "kind": "continuous",
+      "unit": "breaths/min",
+      "unit_label": "breaths/min",
+      "plausible_min": 4,
+      "plausible_max": 60,
+      "concern": "up",
+      "cadence": "nightly",
+      "description": "Average breathing rate during sleep. Very stable per person, so small rises are meaningful.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "manual",
+        "wearable"
+      ]
+    },
+    {
+      "signal": "spo2",
+      "label": "Blood oxygen",
+      "category": "vital",
+      "kind": "continuous",
+      "unit": "pct",
+      "unit_label": "%",
+      "plausible_min": 50,
+      "plausible_max": 100,
+      "concern": "down",
+      "cadence": "nightly",
+      "description": "Average peripheral oxygen saturation during sleep.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "manual",
+        "wearable"
+      ]
+    },
+    {
+      "signal": "sleep_duration",
+      "label": "Sleep duration",
+      "category": "sleep",
+      "kind": "continuous",
+      "unit": "h",
+      "unit_label": "h",
+      "plausible_min": 0,
+      "plausible_max": 16,
+      "concern": "down",
+      "cadence": "nightly",
+      "description": "Total sleep time. Sleep loss weakens immune defences.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "manual",
+        "wearable"
+      ]
+    },
+    {
+      "signal": "sleep_efficiency",
+      "label": "Sleep efficiency",
+      "category": "sleep",
+      "kind": "continuous",
+      "unit": "pct",
+      "unit_label": "%",
+      "plausible_min": 0,
+      "plausible_max": 100,
+      "concern": "down",
+      "cadence": "nightly",
+      "description": "Share of time in bed actually spent asleep.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "manual",
+        "wearable"
+      ]
+    },
+    {
+      "signal": "symptom_fatigue",
+      "label": "Fatigue",
+      "category": "symptom",
+      "kind": "ordinal",
+      "unit": "severity_0_3",
+      "unit_label": "0–3",
+      "plausible_min": 0,
+      "plausible_max": 3,
+      "concern": "up",
+      "cadence": "daily",
+      "description": "Unusual tiredness not explained by workload.",
+      "scale_labels": [
+        "none",
+        "mild",
+        "moderate",
+        "severe"
+      ],
+      "allowed_sources": [
+        "checkin"
+      ]
+    },
+    {
+      "signal": "symptom_fever_chills",
+      "label": "Fever or chills",
+      "category": "symptom",
+      "kind": "ordinal",
+      "unit": "severity_0_3",
+      "unit_label": "0–3",
+      "plausible_min": 0,
+      "plausible_max": 3,
+      "concern": "up",
+      "cadence": "daily",
+      "description": "Feeling feverish, chills or night sweats.",
+      "scale_labels": [
+        "none",
+        "mild",
+        "moderate",
+        "severe"
+      ],
+      "allowed_sources": [
+        "checkin"
+      ]
+    },
+    {
+      "signal": "symptom_sore_throat",
+      "label": "Sore throat",
+      "category": "symptom",
+      "kind": "ordinal",
+      "unit": "severity_0_3",
+      "unit_label": "0–3",
+      "plausible_min": 0,
+      "plausible_max": 3,
+      "concern": "up",
+      "cadence": "daily",
+      "description": "Pain or scratchiness in the throat.",
+      "scale_labels": [
+        "none",
+        "mild",
+        "moderate",
+        "severe"
+      ],
+      "allowed_sources": [
+        "checkin"
+      ]
+    },
+    {
+      "signal": "symptom_swollen_glands",
+      "label": "Swollen glands",
+      "category": "symptom",
+      "kind": "ordinal",
+      "unit": "severity_0_3",
+      "unit_label": "0–3",
+      "plausible_min": 0,
+      "plausible_max": 3,
+      "concern": "up",
+      "cadence": "daily",
+      "description": "Tender or swollen lymph nodes in the neck; can accompany EBV activity.",
+      "scale_labels": [
+        "none",
+        "mild",
+        "moderate",
+        "severe"
+      ],
+      "allowed_sources": [
+        "checkin"
+      ]
+    },
+    {
+      "signal": "symptom_mouth_sores",
+      "label": "Mouth or lip sores",
+      "category": "symptom",
+      "kind": "ordinal",
+      "unit": "severity_0_3",
+      "unit_label": "0–3",
+      "plausible_min": 0,
+      "plausible_max": 3,
+      "concern": "up",
+      "cadence": "daily",
+      "description": "Cold sores or mouth ulcers; can signal HSV-1 reactivation.",
+      "scale_labels": [
+        "none",
+        "mild",
+        "moderate",
+        "severe"
+      ],
+      "allowed_sources": [
+        "checkin"
+      ]
+    },
+    {
+      "signal": "symptom_rash_tingling",
+      "label": "Rash or tingling",
+      "category": "symptom",
+      "kind": "ordinal",
+      "unit": "severity_0_3",
+      "unit_label": "0–3",
+      "plausible_min": 0,
+      "plausible_max": 3,
+      "concern": "up",
+      "cadence": "daily",
+      "description": "Tingling, burning or a rash on one side of the body; can signal shingles (VZV) reactivation.",
+      "scale_labels": [
+        "none",
+        "mild",
+        "moderate",
+        "severe"
+      ],
+      "allowed_sources": [
+        "checkin"
+      ]
+    },
+    {
+      "signal": "symptom_headache",
+      "label": "Headache",
+      "category": "symptom",
+      "kind": "ordinal",
+      "unit": "severity_0_3",
+      "unit_label": "0–3",
+      "plausible_min": 0,
+      "plausible_max": 3,
+      "concern": "up",
+      "cadence": "daily",
+      "description": "Headache of any kind.",
+      "scale_labels": [
+        "none",
+        "mild",
+        "moderate",
+        "severe"
+      ],
+      "allowed_sources": [
+        "checkin"
+      ]
+    },
+    {
+      "signal": "symptom_muscle_aches",
+      "label": "Muscle aches",
+      "category": "symptom",
+      "kind": "ordinal",
+      "unit": "severity_0_3",
+      "unit_label": "0–3",
+      "plausible_min": 0,
+      "plausible_max": 3,
+      "concern": "up",
+      "cadence": "daily",
+      "description": "Body or muscle aches not explained by exercise.",
+      "scale_labels": [
+        "none",
+        "mild",
+        "moderate",
+        "severe"
+      ],
+      "allowed_sources": [
+        "checkin"
+      ]
+    },
+    {
+      "signal": "mood",
+      "label": "Mood",
+      "category": "wellbeing",
+      "kind": "ordinal",
+      "unit": "scale_1_5",
+      "unit_label": "1–5",
+      "plausible_min": 1,
+      "plausible_max": 5,
+      "concern": "down",
+      "cadence": "daily",
+      "description": "Self-rated overall mood.",
+      "scale_labels": [
+        "very low",
+        "low",
+        "neutral",
+        "good",
+        "very good"
+      ],
+      "allowed_sources": [
+        "checkin"
+      ]
+    },
+    {
+      "signal": "stress",
+      "label": "Stress",
+      "category": "wellbeing",
+      "kind": "ordinal",
+      "unit": "scale_1_5",
+      "unit_label": "1–5",
+      "plausible_min": 1,
+      "plausible_max": 5,
+      "concern": "up",
+      "cadence": "daily",
+      "description": "Self-rated stress. Chronic stress suppresses immune function.",
+      "scale_labels": [
+        "very low",
+        "low",
+        "moderate",
+        "high",
+        "very high"
+      ],
+      "allowed_sources": [
+        "checkin"
+      ]
+    },
+    {
+      "signal": "saliva_ebv_dna",
+      "label": "EBV in saliva",
+      "category": "lab",
+      "kind": "continuous",
+      "unit": "copies/mL",
+      "unit_label": "copies/mL",
+      "plausible_min": 0,
+      "plausible_max": 10000000000.0,
+      "concern": "up",
+      "cadence": "on_demand",
+      "description": "Epstein-Barr virus DNA shed in saliva. Dormant herpesviruses reactivate more often in spaceflight; rising shedding is an early sign of weakened immune control.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "lab",
+        "manual"
+      ]
+    },
+    {
+      "signal": "saliva_vzv_dna",
+      "label": "VZV in saliva",
+      "category": "lab",
+      "kind": "continuous",
+      "unit": "copies/mL",
+      "unit_label": "copies/mL",
+      "plausible_min": 0,
+      "plausible_max": 10000000000.0,
+      "concern": "up",
+      "cadence": "on_demand",
+      "description": "Varicella-zoster virus (shingles) DNA shed in saliva. Dormant herpesviruses reactivate more often in spaceflight; rising shedding is an early sign of weakened immune control.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "lab",
+        "manual"
+      ]
+    },
+    {
+      "signal": "saliva_hsv1_dna",
+      "label": "HSV-1 in saliva",
+      "category": "lab",
+      "kind": "continuous",
+      "unit": "copies/mL",
+      "unit_label": "copies/mL",
+      "plausible_min": 0,
+      "plausible_max": 10000000000.0,
+      "concern": "up",
+      "cadence": "on_demand",
+      "description": "Herpes simplex virus 1 DNA shed in saliva. Dormant herpesviruses reactivate more often in spaceflight; rising shedding is an early sign of weakened immune control.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "lab",
+        "manual"
+      ]
+    },
+    {
+      "signal": "saliva_cortisol",
+      "label": "Saliva cortisol",
+      "category": "lab",
+      "kind": "continuous",
+      "unit": "nmol/L",
+      "unit_label": "nmol/L",
+      "plausible_min": 0,
+      "plausible_max": 300,
+      "concern": "up",
+      "cadence": "on_demand",
+      "description": "Stress hormone. Persistently high levels are linked to viral reactivation.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "lab",
+        "manual"
+      ]
+    },
+    {
+      "signal": "wbc_count",
+      "label": "White blood cells",
+      "category": "lab",
+      "kind": "continuous",
+      "unit": "10^9/L",
+      "unit_label": "×10⁹/L",
+      "plausible_min": 0.1,
+      "plausible_max": 100,
+      "concern": "both",
+      "cadence": "on_demand",
+      "description": "Total white blood cell count. Abnormal in either direction.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "lab",
+        "manual"
+      ]
+    },
+    {
+      "signal": "crp",
+      "label": "C-reactive protein",
+      "category": "lab",
+      "kind": "continuous",
+      "unit": "mg/L",
+      "unit_label": "mg/L",
+      "plausible_min": 0,
+      "plausible_max": 500,
+      "concern": "up",
+      "cadence": "on_demand",
+      "description": "General marker of inflammation.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "lab",
+        "manual"
+      ]
+    },
+    {
+      "signal": "radiation_dose_daily",
+      "label": "Radiation dose",
+      "category": "context",
+      "kind": "continuous",
+      "unit": "mGy",
+      "unit_label": "mGy/day",
+      "plausible_min": 0,
+      "plausible_max": 1000,
+      "concern": "up",
+      "cadence": "daily",
+      "description": "Absorbed dose over the day from the personal or habitat dosimeter. Radiation is a known immune stressor.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "environment",
+        "ground",
+        "manual"
+      ]
+    },
+    {
+      "signal": "workload",
+      "label": "Workload",
+      "category": "context",
+      "kind": "continuous",
+      "unit": "h",
+      "unit_label": "h",
+      "plausible_min": 0,
+      "plausible_max": 24,
+      "concern": "up",
+      "cadence": "daily",
+      "description": "Scheduled working hours that day.",
+      "scale_labels": null,
+      "allowed_sources": [
+        "environment",
+        "ground",
+        "manual"
+      ]
+    }
+  ]
+}

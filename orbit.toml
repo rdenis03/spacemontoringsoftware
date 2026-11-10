@@ -1,0 +1,49 @@
+# ORBIT configuration.
+# Which implementation fills each module slot, and its options.
+# Paths are relative to this file. Keys ending in _path are file paths.
+
+[mission]
+name = "ORBIT demo mission"
+# The daily assessment runs after the night's wearable data and the morning check-in.
+assessment_hour_utc = 10
+
+[storage]
+database = "data/orbit.db"
+
+[pipeline]
+baseline_window_days = 14   # days of history that define "your normal"
+recent_days = 3             # days compared against that normal
+event_lookback_days = 7     # how far back stress events count
+
+# ---- Module slots ---------------------------------------------------------
+# Change `use` to switch implementation. `python -m orbit modules` lists them.
+
+[modules.baseline]          # M6
+use = "rolling_median"
+min_samples = 5
+
+[modules.detector]          # M7
+use = "robust_z"
+threshold = 2.5
+drift_threshold = 1.5
+drift_days = 2
+
+[modules.scorer]            # M8
+use = "rule_based"
+
+[modules.actions]           # M10
+use = "card_library"
+cards_path = "examples/action_cards.jsonl"
+
+[modules.sync]              # M13
+use = "consent_gate"
+
+# ---- Data sources -----------------------------------------------------------
+# Read in order by `python -m orbit ingest`. Add the M2 simulator and the
+# M5 space-weather feed here as they are built.
+
+[[sources]]
+use = "files"
+crew_path = "examples/crew.jsonl"
+observations_path = "examples/observations.jsonl"
+events_path = "examples/context_events.jsonl"

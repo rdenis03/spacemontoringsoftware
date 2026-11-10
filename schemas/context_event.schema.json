@@ -1,0 +1,132 @@
+{
+  "$defs": {
+    "EventType": {
+      "description": "Things that happen to the crew and can stress the immune system.",
+      "enum": [
+        "solar_flare",
+        "solar_particle_event",
+        "cme",
+        "geomagnetic_storm",
+        "eva",
+        "sleep_shift",
+        "crew_illness",
+        "other"
+      ],
+      "title": "EventType",
+      "type": "string"
+    },
+    "Severity": {
+      "enum": [
+        "low",
+        "moderate",
+        "high",
+        "extreme"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "Source": {
+      "description": "Where a reading came from (the channel, not whether it is simulated).",
+      "enum": [
+        "wearable",
+        "checkin",
+        "lab",
+        "environment",
+        "ground",
+        "manual"
+      ],
+      "title": "Source",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Something that happened to the crew and may stress the immune system.\n\n``astronaut_id=None`` means the event affects the whole crew (e.g. a\nsolar particle event). ``external_id`` keeps the source's own ID, such as\na NASA DONKI activity ID, so events are not imported twice.",
+  "properties": {
+    "event_id": {
+      "maxLength": 64,
+      "title": "Event Id",
+      "type": "string"
+    },
+    "event_type": {
+      "$ref": "#/$defs/EventType"
+    },
+    "start": {
+      "format": "date-time",
+      "title": "Start",
+      "type": "string"
+    },
+    "end": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "None for a single moment or still ongoing.",
+      "title": "End"
+    },
+    "severity": {
+      "$ref": "#/$defs/Severity",
+      "default": "moderate"
+    },
+    "astronaut_id": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Astronaut Id"
+    },
+    "source": {
+      "$ref": "#/$defs/Source",
+      "default": "ground"
+    },
+    "external_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "External Id"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "simulated": {
+      "default": false,
+      "title": "Simulated",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "event_type",
+    "start"
+  ],
+  "title": "ContextEvent",
+  "type": "object",
+  "$id": "orbit/1.0.0/context_event.schema.json"
+}

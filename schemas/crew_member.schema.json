@@ -1,0 +1,72 @@
+{
+  "$defs": {
+    "SignalCategory": {
+      "description": "Broad groups of health indicators. Used for consent and dashboard grouping.",
+      "enum": [
+        "vital",
+        "sleep",
+        "symptom",
+        "wellbeing",
+        "lab",
+        "context"
+      ],
+      "title": "SignalCategory",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Astronaut profile.",
+  "properties": {
+    "astronaut_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$",
+      "title": "Astronaut Id",
+      "type": "string"
+    },
+    "callsign": {
+      "maxLength": 32,
+      "minLength": 1,
+      "title": "Callsign",
+      "type": "string"
+    },
+    "role": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Role"
+    },
+    "mission_start": {
+      "format": "date-time",
+      "title": "Mission Start",
+      "type": "string"
+    },
+    "share_with_earth": {
+      "default": [
+        "context",
+        "lab",
+        "sleep",
+        "vital"
+      ],
+      "items": {
+        "$ref": "#/$defs/SignalCategory"
+      },
+      "title": "Share With Earth",
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "astronaut_id",
+    "callsign",
+    "mission_start"
+  ],
+  "title": "CrewMember",
+  "type": "object",
+  "$id": "orbit/1.0.0/crew_member.schema.json"
+}

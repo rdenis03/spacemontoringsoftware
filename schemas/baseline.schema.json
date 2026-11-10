@@ -1,0 +1,94 @@
+{
+  "$defs": {
+    "SignalType": {
+      "description": "Every health indicator the system understands.\n\nAdding a signal: add it here AND to the registry in ``signals.py``.\nA test fails if the two ever get out of sync.",
+      "enum": [
+        "skin_temp",
+        "resting_hr",
+        "hrv_rmssd",
+        "resp_rate",
+        "spo2",
+        "sleep_duration",
+        "sleep_efficiency",
+        "symptom_fatigue",
+        "symptom_fever_chills",
+        "symptom_sore_throat",
+        "symptom_swollen_glands",
+        "symptom_mouth_sores",
+        "symptom_rash_tingling",
+        "symptom_headache",
+        "symptom_muscle_aches",
+        "mood",
+        "stress",
+        "saliva_ebv_dna",
+        "saliva_vzv_dna",
+        "saliva_hsv1_dna",
+        "saliva_cortisol",
+        "wbc_count",
+        "crp",
+        "radiation_dose_daily",
+        "workload"
+      ],
+      "title": "SignalType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An astronaut's personal normal for one signal (from M6).\n\nThe dashboard draws ``center ± spread`` as the shaded \"your normal\" band.",
+  "properties": {
+    "astronaut_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$",
+      "title": "Astronaut Id",
+      "type": "string"
+    },
+    "signal": {
+      "$ref": "#/$defs/SignalType"
+    },
+    "as_of": {
+      "description": "Computed from data before this moment.",
+      "format": "date-time",
+      "title": "As Of",
+      "type": "string"
+    },
+    "center": {
+      "description": "Typical value, e.g. the median.",
+      "title": "Center",
+      "type": "number"
+    },
+    "spread": {
+      "description": "Typical variation, e.g. scaled MAD.",
+      "minimum": 0,
+      "title": "Spread",
+      "type": "number"
+    },
+    "n_samples": {
+      "description": "Readings the baseline was built from.",
+      "minimum": 1,
+      "title": "N Samples",
+      "type": "integer"
+    },
+    "window_days": {
+      "minimum": 1,
+      "title": "Window Days",
+      "type": "integer"
+    },
+    "method": {
+      "default": "unspecified",
+      "maxLength": 32,
+      "title": "Method",
+      "type": "string"
+    }
+  },
+  "required": [
+    "astronaut_id",
+    "signal",
+    "as_of",
+    "center",
+    "spread",
+    "n_samples",
+    "window_days"
+  ],
+  "title": "Baseline",
+  "type": "object",
+  "$id": "orbit/1.0.0/baseline.schema.json"
+}

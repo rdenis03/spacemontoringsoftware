@@ -1,0 +1,141 @@
+{
+  "$defs": {
+    "Quality": {
+      "description": "Data quality flag. Analytics should ignore BAD and down-weight SUSPECT.",
+      "enum": [
+        "good",
+        "suspect",
+        "bad"
+      ],
+      "title": "Quality",
+      "type": "string"
+    },
+    "SignalType": {
+      "description": "Every health indicator the system understands.\n\nAdding a signal: add it here AND to the registry in ``signals.py``.\nA test fails if the two ever get out of sync.",
+      "enum": [
+        "skin_temp",
+        "resting_hr",
+        "hrv_rmssd",
+        "resp_rate",
+        "spo2",
+        "sleep_duration",
+        "sleep_efficiency",
+        "symptom_fatigue",
+        "symptom_fever_chills",
+        "symptom_sore_throat",
+        "symptom_swollen_glands",
+        "symptom_mouth_sores",
+        "symptom_rash_tingling",
+        "symptom_headache",
+        "symptom_muscle_aches",
+        "mood",
+        "stress",
+        "saliva_ebv_dna",
+        "saliva_vzv_dna",
+        "saliva_hsv1_dna",
+        "saliva_cortisol",
+        "wbc_count",
+        "crp",
+        "radiation_dose_daily",
+        "workload"
+      ],
+      "title": "SignalType",
+      "type": "string"
+    },
+    "Source": {
+      "description": "Where a reading came from (the channel, not whether it is simulated).",
+      "enum": [
+        "wearable",
+        "checkin",
+        "lab",
+        "environment",
+        "ground",
+        "manual"
+      ],
+      "title": "Source",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One health reading for one astronaut at one moment.\n\nExample::\n\n    Observation(\n        astronaut_id=\"AST-01\",\n        timestamp=\"2026-03-01T06:00:00Z\",\n        signal=\"skin_temp\",\n        value=34.6,\n        source=\"wearable\",\n    )\n\n``unit`` may be omitted and is then filled with the signal's canonical\nunit. If given, it must match exactly, which catches °F/°C mix-ups.",
+  "properties": {
+    "observation_id": {
+      "maxLength": 64,
+      "title": "Observation Id",
+      "type": "string"
+    },
+    "astronaut_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$",
+      "title": "Astronaut Id",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "When the reading applies, in UTC. For nightly summaries, use the wake-up time.",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "signal": {
+      "$ref": "#/$defs/SignalType"
+    },
+    "value": {
+      "title": "Value",
+      "type": "number"
+    },
+    "unit": {
+      "description": "Must equal the signal's canonical unit.",
+      "title": "Unit",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/Source"
+    },
+    "quality": {
+      "$ref": "#/$defs/Quality",
+      "default": "good"
+    },
+    "simulated": {
+      "default": false,
+      "description": "True for data produced by the mission simulator.",
+      "title": "Simulated",
+      "type": "boolean"
+    },
+    "device_id": {
+      "anyOf": [
+        {
+          "maxLength": 64,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Device Id"
+    },
+    "note": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Note"
+    }
+  },
+  "required": [
+    "astronaut_id",
+    "timestamp",
+    "signal",
+    "value",
+    "unit",
+    "source"
+  ],
+  "title": "Observation",
+  "type": "object",
+  "$id": "orbit/1.0.0/observation.schema.json"
+}
