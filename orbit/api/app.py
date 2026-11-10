@@ -17,6 +17,8 @@ dashboard and the command line always show exactly the same results.
     GET  /api/crew/{id}/assessments          score history for the trend line
     POST /api/crew/{id}/checkin              daily check-in (M11); re-assesses at once
     GET  /api/crew/{id}/earth-packet         what would be sent to Earth (M13)
+    POST /api/crew/{id}/earth-packet/send    package and queue for Earth with the comms delay (M13)
+    GET  /api/outbox                         queued and delivered packets (M13)
     GET  /api/events                         stress events (solar, EVA ...)
     POST /api/observations                   push readings from a device or feed (M3)
     POST /api/pipeline/run                   re-run the assessments
@@ -26,7 +28,9 @@ Interactive docs: http://localhost:8000/docs once the server runs.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+import uuid
+from collections.abc import Callable
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Query
@@ -35,6 +39,7 @@ from pydantic import BaseModel, Field
 
 from orbit.core.interfaces import DayResult, EarthPacket
 from orbit.core.pipeline import Pipeline
+from orbit.core.store import OutboxEntry
 from orbit.schema import (
     SCHEMA_VERSION,
     ActionCard,
@@ -95,6 +100,22 @@ class ConsentUpdate(BaseModel):
     share_with_earth: list[SignalCategory] = Field(examples=[["vital", "sleep"]])
 
 
+class OutboxItem(BaseModel):
+    """An outbox entry with its delivery status right now (B16)."""
+
+    id: str
+    astronaut_id: str
+    created_at: datetime
+    deliver_at: datetime
+    packet: EarthPacket
+    summary: str = ""
+    auto: bool = False
+    status: Literal["queued", "delivered"]
+    seconds_left: float = Field(description="Seconds until delivery; 0 once delivered.")
+    sent: dict[str, int] = Field(description="Readings sent, per category.")
+    withheld: dict[str, int] = Field(description="Readings kept onboard, per category.")
+
+
 class RunRequest(BaseModel):
     start: date | None = None
     end: date | None = None
@@ -110,7 +131,18 @@ class RunResponse(BaseModel):
 # ---- app ----------------------------------------------------------------------
 
 
-def create_app(pipeline: Pipeline, *, mission_name: str = "ORBIT mission") -> FastAPI:
+def create_app(
+    pipeline: Pipeline,
+    *,
+    mission_name: str = "ORBIT mission",
+    comms_delay_minutes: float = 20.0,
+    clock: Callable[[], datetime] | None = None,
+) -> FastAPI:
+    """Build the API. ``clock`` (UTC) drives the comms queue; tests pass a fixed one.
+
+    Comms delay is real time, not mission time, so the demo countdown is visible.
+    """
+    now = clock or (lambda: datetime.now(timezone.utc))
     app = FastAPI(
         title="ORBIT API",
         version=SCHEMA_VERSION,
@@ -167,7 +199,8 @@ def create_app(pipeline: Pipeline, *, mission_name: str = "ORBIT mission") -> Fa
     @app.get("/api/health")
     def health() -> dict[str, Any]:
         return {"status": "ok", "mission": mission_name, "schema_version": SCHEMA_VERSION,
-                "modules": pipeline.module_names, "counts": store.counts()}
+                "modules": pipeline.module_names, "counts": store.counts(),
+                "comms": {"one_way_delay_minutes": comms_delay_minutes}}
 
     @app.get("/api/signals")
     def signals() -> dict[str, Any]:
@@ -304,6 +337,50 @@ def create_app(pipeline: Pipeline, *, mission_name: str = "ORBIT mission") -> Fa
         member_or_404(astronaut_id)
         return pipeline.earth_packet(astronaut_id, _utc(start), _utc(end))
 
+    def outbox_item(entry: OutboxEntry) -> OutboxItem:
+        left = (entry.deliver_at - now()).total_seconds()
+        sent: dict[str, int] = {}
+        for obs in entry.packet.observations:
+            sent[obs.category.value] = sent.get(obs.category.value, 0) + 1
+        return OutboxItem(
+            **entry.model_dump(exclude={"packet"}), packet=entry.packet,
+            status="delivered" if left <= 0 else "queued", seconds_left=max(0.0, left),
+            sent=sent, withheld=dict(entry.packet.withheld),
+        )
+
+    @app.post("/api/crew/{astronaut_id}/earth-packet/send")
+    def send_earth_packet(
+        astronaut_id: str,
+        start: datetime,
+        end: datetime,
+        delay_minutes: float | None = Query(
+            default=None, ge=0, le=24 * 60,
+            description="One-way delay for this packet: Moon about 0.02, Mars 4-24. "
+                        "Default: [comms] one_way_delay_minutes in orbit.toml.",
+        ),
+    ) -> OutboxItem:
+        """Package the period through the consent gate and queue it for Earth (B16)."""
+        member_or_404(astronaut_id)
+        start_utc, end_utc = _utc(start), _utc(end)
+        if end_utc < start_utc:
+            raise HTTPException(422, "end must not be before start")
+        delay = comms_delay_minutes if delay_minutes is None else delay_minutes
+        created = now()
+        entry = OutboxEntry(
+            id=f"pkt-{uuid.uuid4().hex[:12]}", astronaut_id=astronaut_id,
+            created_at=created, deliver_at=created + timedelta(minutes=delay),
+            packet=pipeline.earth_packet(astronaut_id, start_utc, end_utc),
+        )
+        store.queue(entry)
+        return outbox_item(entry)
+
+    @app.get("/api/outbox")
+    def outbox(astronaut_id: str | None = None) -> list[OutboxItem]:
+        """Everything sent to Earth, newest first, with ``status`` and ``seconds_left`` now."""
+        if astronaut_id is not None:
+            member_or_404(astronaut_id)
+        return [outbox_item(e) for e in store.outbox(astronaut_id)]
+
     @app.get("/api/events")
     def events(
         astronaut_id: str | None = None, start: datetime | None = None, end: datetime | None = None
@@ -342,4 +419,5 @@ def create_app_from_settings(config_path: str | None = None) -> FastAPI:
     from orbit.core.config import load_settings
 
     settings = load_settings(config_path)
-    return create_app(Pipeline.from_settings(settings), mission_name=settings.mission_name)
+    return create_app(Pipeline.from_settings(settings), mission_name=settings.mission_name,
+                      comms_delay_minutes=settings.comms_delay_minutes)

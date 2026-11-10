@@ -1,0 +1,173 @@
+/*
+ * ORBIT design tokens — "ORBIT Instrument" design (Industry design system,
+ * dark instrument theme). Square, hairline-framed "blueprint" objects,
+ * uppercase tracked labels, Roboto, a steel-blue accent.
+ *
+ * Dark is the default (dim cabin); light follows the system setting with the
+ * Industry light ramps. No in-app appearance switch.
+ *
+ * Level colours come in two roles: --level-X is the mark (icon fills, chart
+ * points, bands) and --level-X-ink is for text. WCAG contrast of inks on the
+ * background, dark / light: green 10.3 / 5.1, yellow 12.2 / 4.9,
+ * orange 9.7 / 5.1, red 8.3 / 5.8. Body text 14.9 / 14.8, secondary 9.3 / 5.9.
+ */
+
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("../assets/fonts/roboto-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("../assets/fonts/roboto-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: dark;
+
+  /* ---- design system tokens (dark instrument theme) ---- */
+  --color-bg: #111315;
+  --color-surface: #181b1e;
+  --color-text: #e4e6e9;
+  --color-accent: #7fa3c7;
+  --color-divider: color-mix(in srgb, #e4e6e9 13%, transparent);
+
+  --color-neutral-100: #1f2022;
+  --color-neutral-200: #2e2f31;
+  --color-neutral-300: #424244;
+  --color-neutral-400: #5d5d60;
+  --color-neutral-500: #7a7a7d;
+  --color-neutral-600: #98989b;
+  --color-neutral-700: #b7b7ba;
+  --color-neutral-800: #d4d4d7;
+  --color-neutral-900: #f5f5f8;
+
+  --color-accent-100: #18232f;
+  --color-accent-200: #22364a;
+  --color-accent-300: #2c455d;
+  --color-accent-400: #416180;
+  --color-accent-500: #597ea3;
+  --color-accent-600: #749dc4;
+  --color-accent-700: #94bce3;
+  --color-accent-800: #b5d9fd;
+  --color-accent-900: #d6ebff;
+
+  --level-green: #6cb089;
+  --level-yellow: #d9ba70;
+  --level-orange: #de8f57;
+  --level-red: #db6c66;
+  --level-green-ink: #92ceaa;
+  --level-yellow-ink: #eace8c;
+  --level-orange-ink: #f0ad7f;
+  --level-red-ink: #f4928a;
+
+  --font-heading: "Roboto", system-ui, sans-serif;
+  --font-body: "Roboto", system-ui, sans-serif;
+
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 14px 40px rgba(0, 0, 0, 0.6);
+
+  /* ---- aliases used across the app ---- */
+  --surface: var(--color-bg);
+  --raised: var(--color-surface);
+  --raised-2: var(--color-neutral-200);
+  --separator: var(--color-divider);
+  --stroke: var(--color-divider);
+  --stroke-accessible: var(--color-neutral-600);
+  --content: var(--color-text);
+  --secondary: var(--color-neutral-700);
+  --accent: var(--color-accent);
+  --accent-text: var(--color-accent-700);
+  --brand-fill: var(--color-accent);
+  --brand-fill-hover: var(--color-accent-600);
+  --on-brand: var(--color-bg);
+  --accent-ink: var(--on-brand);
+  --focus: var(--color-accent);
+  --band: var(--color-accent-100);
+  --band-edge: var(--color-accent-500);
+  --band-center: var(--color-accent-700);
+  --shadow-card: none;
+  --shadow-raised: var(--shadow-md);
+
+  --font-ui: var(--font-body);
+  --font-display: var(--font-heading);
+  --text-body: 0.9375rem; /* 15 */
+  --text-secondary: 0.8125rem; /* 13 */
+  --text-min: 0.75rem; /* 12 */
+  --text-kicker: 0.6875rem; /* 11, uppercase tracked labels */
+
+  --radius: 0;
+  --radius-small: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --target: 42px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --color-bg: #f2f2f3;
+    --color-surface: #e9e9ea;
+    --color-text: #1d1f20;
+    --color-accent: #5980a6;
+    --color-divider: color-mix(in srgb, #1d1f20 16%, transparent);
+
+    --color-neutral-100: #f5f5f8;
+    --color-neutral-200: #e7e7ea;
+    --color-neutral-300: #d4d4d7;
+    --color-neutral-400: #b7b7ba;
+    --color-neutral-500: #98989b;
+    --color-neutral-600: #7a7a7d;
+    --color-neutral-700: #5d5d60;
+    --color-neutral-800: #424244;
+    --color-neutral-900: #2b2b2d;
+
+    --color-accent-100: #e3eefa;
+    --color-accent-200: #d6ebff;
+    --color-accent-300: #b5d9fd;
+    --color-accent-400: #94bce3;
+    --color-accent-500: #749dc4;
+    --color-accent-600: #597ea3;
+    --color-accent-700: #416180;
+    --color-accent-800: #2c455d;
+    --color-accent-900: #1d2d3d;
+
+    /* marks and inks both deep enough for light backgrounds */
+    --level-green: #2e734f;
+    --level-yellow: #816512;
+    --level-orange: #9c5313;
+    --level-red: #a43b38;
+    --level-green-ink: #2e734f;
+    --level-yellow-ink: #816512;
+    --level-orange-ink: #9c5313;
+    --level-red-ink: #a43b38;
+
+    --brand-fill-hover: var(--color-accent-700);
+    --on-brand: #ffffff;
+    --shadow-md: 0 3px 10px color-mix(in srgb, #2b2b2d 16%, transparent);
+    --shadow-lg: 0 12px 32px color-mix(in srgb, #2b2b2d 22%, transparent);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --color-divider: var(--color-neutral-600);
+    --secondary: var(--color-text);
+  }
+}

@@ -1,0 +1,43 @@
+/* Uppercase tabs, the selected one underlined in the accent. */
+.segmented {
+  display: flex;
+  align-self: flex-end;
+}
+
+.segmented__tab {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  padding: 14px 20px;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral-600);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.segmented__tab::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: transparent;
+}
+
+.segmented__tab:hover {
+  color: var(--color-text);
+}
+
+.segmented__tab[aria-selected="true"] {
+  color: var(--color-text);
+}
+
+.segmented__tab[aria-selected="true"]::after {
+  background: var(--color-accent);
+}

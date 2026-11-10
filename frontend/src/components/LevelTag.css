@@ -1,0 +1,8 @@
+.level-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-min);
+  font-weight: 500;
+  white-space: nowrap;
+}
