@@ -57,9 +57,9 @@ def test_features_of_one_signal_become_one_reason(ctx):
     names = {f.name for f in features}
     assert {"dev:skin_temp", "drift:skin_temp"} <= names
     weights = load_weights(DEFAULT_WEIGHTS)[2]
-    value = {f.name: f.value for f in features}
-    expected = round(weights["dev:skin_temp"] * value["dev:skin_temp"]
-                     + weights["drift:skin_temp"] * value["drift:skin_temp"], 1)
+    # Every feature of the signal counts (vitals_moving can also point at skin_temp).
+    expected = round(sum(weights[f.name] * f.value for f in features
+                         if f.signal == "skin_temp"), 1)
     [skin] = [c for c in LearnedScorer().contributors(features) if c.signal == "skin_temp"]
     assert skin.points == pytest.approx(expected)
     assert skin.label.startswith("Skin temperature")
@@ -112,9 +112,8 @@ def test_score_is_capped_at_100(tmp_path, ctx):
     assert sum(c.points for c in result.contributors) > 100
 
 
-def test_learned_config_alerts_on_the_demo_story():
-    # With the trained weights (B09) AST-01 is red on days 89 and 90, not yellow then
-    # orange. orbit.toml keeps rule_based and the pinned story; B10 decides on the switch.
+def test_learned_config_keeps_the_demo_story():
+    # The trained weights (B09, recalibrated: 25 points = 92 % probability) keep the story.
     settings = load_settings(ROOT / "experiments" / "learned.toml")
     assert settings.modules["scorer"].use == "learned"
     assert load_settings(ROOT / "orbit.toml").modules["scorer"].use == "rule_based", \
@@ -124,6 +123,5 @@ def test_learned_config_alerts_on_the_demo_story():
         pipeline.ingest(create("source", choice.use, **choice.options))
     day89 = pipeline.assess("AST-01", DAY_89, save=False).assessment
     day90 = pipeline.assess("AST-01", DAY_90, save=False).assessment
-    assert day89.level.rank >= AlertLevel.YELLOW.rank
-    assert day90.level.rank >= AlertLevel.YELLOW.rank and day90.score >= day89.score
+    assert (day89.level, day90.level) == (AlertLevel.YELLOW, AlertLevel.ORANGE)
     assert pipeline.assess("AST-02", DAY_90, save=False).assessment.level is AlertLevel.GREEN

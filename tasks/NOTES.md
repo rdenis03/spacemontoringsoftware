@@ -167,15 +167,17 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 
 ## B09 · Train the scorer on simulated missions
 
-- `python -m orbit.learning.train --seeds 1-20 --days 180 --crew 4 --out orbit/learning/weights.json [--config orbit.toml]` (about 35 s), after `pip install -e ".[dev,train]"`. Only `train.py` imports scikit-learn.
-- `orbit.learning.train`: `train(seeds, days=180, crew=4, out=, config=) -> dict` (the written document), `dataset(seeds, days, crew, config) -> (X, y)`, `fit(X, y) -> dict`, `parse_seeds("1-3,7")`, `seeds_label(seeds)`.
+- `python -m orbit.learning.train --seeds 1-20 --days 180 --crew 4 --out orbit/learning/weights.json [--config orbit.toml] [--yellow-probability 0.92] [--class-weight none|balanced]` (about 35 s), after `pip install -e ".[dev,train]"`. Only `train.py` imports scikit-learn.
+- `orbit.learning.train`: `train(seeds, days=180, crew=4, out=, config=, yellow_probability=0.92, class_weight=None) -> dict` (the written document), `dataset(seeds, days, crew, config) -> (X, y)`, `fit(X, y, yellow_probability, class_weight) -> dict`, `parse_seeds("1-3,7")`, `seeds_label(seeds)`.
 - `--config` picks the baseline, detector and pipeline settings that make the features; its sources are ignored. Retrain if the baseline or detector changes.
 - Seeds 101-105 raise `ValueError` (`HELD_OUT_SEEDS`): B10 evaluates on them.
-- Shipped weights: version `trained-s1-20-d180-c4`, file `scale` 1.0 (weights are already points), 12,720 astronaut-days, 1,810 ill, training AUC 0.90. `trained_on` also lists `dropped_features`, `unseen_features`, `intercept`, `points_per_logit`.
-- Biggest weights: CRP 48, viral DNA about 40 per unit, resp rate 18.4 and skin temp 17.4 per deviation unit. Dropped (negative): `vitals_moving`, `event:eva`, `dev:spo2`, both sleep `dev:*`, 5 `drift:*`, `sym:symptom_swollen_glands`.
+- Recalibrated after the first merge (the team's choice): no class weights, and 25 points = 92 % model probability, `scale = 25 / (logit(0.92) - b0)`. The task's formula (balanced classes, 25 points = 50 %) made the learned demo red on days 89 and 90 with 0.17 false alarms / 30 d; it is still available as `--yellow-probability 0.5 --class-weight balanced` (version suffix `-p50-bal`).
+- The calibration was chosen on validation seeds 21-25, never on 101-105: 0 false alarms, lead 0.77 d (rule_based 0.63).
+- Shipped weights: version `trained-s1-20-d180-c4`, file `scale` 1.0 (weights are already points), 12,720 astronaut-days, 1,810 ill, training AUC 0.90. `trained_on` also lists `class_weight`, `yellow_probability`, `dropped_features`, `unseen_features`, `intercept`, `points_per_logit`.
+- Biggest weights: CRP 13.4, viral DNA about 11 per unit, resp rate 5.6 and skin temp 5.2 per deviation unit. Dropped (negative): `event:eva`, `dev:spo2`, both sleep `dev:*`, 4 `drift:*`.
 - Same arguments give a byte-identical file (LF line ends) with the same scikit-learn version (1.9.1 here).
 - The tiny test run uses seed 2: seed 1 has no illness in 40 days x 2 crew, and training stops with "needs both ill and healthy days".
-- Demo story with `experiments/learned.toml` changed: AST-01 is red on days 89 and 90 (100 on day 90), AST-02 green. `orbit.toml` (rule_based) is unchanged: yellow, then orange 70.2.
-- `tests/test_scorer_learned.py` (B08) was updated with the team's agreement: it checks the weights format, not placeholder values, and only that AST-01 alerts on days 89-90.
-- B10, first look on seeds 101-105 (180 d x 4 crew): learned sensitivity 1.00, lead 1.0 day, 0.17 false alarms / 30 d, confounder alert rate 0.28; rule_based 1.00, 0.1 day, 0.00, 0.14. Earlier warning, more false alarms, and a red/red demo: the team decides before switching.
-- B20: the stage script relies on rule_based points; revisit only if B10 switches the scorer.
+- Demo story with `experiments/learned.toml`: AST-01 yellow on day 89, orange 71.0 on day 90 (rule_based 70.2), AST-02 green. Top reason on day 90 is now VZV in saliva (22.1), then resp rate and skin temp; the rash earns 0.8.
+- `tests/test_scorer_learned.py` (B08) was updated with the team's agreement: it checks the weights format, not placeholder values, and pins yellow then orange for the learned config.
+- B10, first look on seeds 101-105 (180 d x 4 crew): learned sensitivity 1.00, lead 0.4 day, 0 false alarms, confounder alert rate 0.15; rule_based 1.00, 0.1 day, 0, 0.14.
+- B20: the stage script relies on rule_based points; with the learned weights HR +30 and temp +0.7 score differently, so recheck it if B10 switches the scorer.
