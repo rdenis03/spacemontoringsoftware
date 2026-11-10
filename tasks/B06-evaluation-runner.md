@@ -27,8 +27,8 @@ is better.
 
 1. CLI, exactly as SPEC M9:
    ```bash
-   python -m orbit.evaluation --config orbit.toml --config experiments/cusum.toml \
-       --days 180 --crew 4 --seeds 1 2 3 4 5 --out reports/evaluation.json
+   python -m orbit.evaluation --config orbit.toml --config experiments/<other>.toml \
+       --days 180 --crew 4 --seeds 1 2 3 4 5 --out data/reports/evaluation.json
    ```
    plus `--min-level` (default `yellow`).
 2. For each config and seed: load settings, replace its sources with

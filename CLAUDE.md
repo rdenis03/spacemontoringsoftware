@@ -5,7 +5,7 @@ ORBIT is an immune early-warning system for astronauts on long missions
 
 **Before changing anything, read `SPEC.md` Parts 1 and 2.** Then:
 
-- **Given a task ID (B01 to B22):** read `tasks/<ID>-*.md` and every file it
+- **Given a task ID (B01 to B20; B12 was dropped):** read `tasks/<ID>-*.md` and every file it
   lists under *Read first*. The task says which files you may touch, what to
   build, the tests to add and when you are done. Do only that task.
 - **Otherwise:** read the section in `SPEC.md` Part 3 for the module you are
