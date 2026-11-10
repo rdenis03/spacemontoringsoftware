@@ -41,7 +41,7 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - `extract(ctx, anomalies) -> list[Feature]`: non-zero features only, in `FEATURE_NAMES` order; pure and deterministic.
 - `vector(features) -> dict[str, float]`: every `FEATURE_NAMES` key in order, zeros filled; unknown names raise `ValueError`.
 - `Feature(name, value, label, signal=None, event_id=None)`, frozen. B08: `Contributor(label=f.label, points=w * f.value, signal=f.signal, event_id=f.event_id)`.
-- `FEATURE_NAMES` (42): `dev:*` x7, `drift:*` x7, `vitals_moving`, `sym:*` x8, `dna:*` x3, `crp:high`, `stress:high`, `mood:low`, `event:*` x8. Append new names at the end only, then retrain (B09).
+- `FEATURE_NAMES` (37): `dev:*` x7, `drift:*` x7, `vitals_moving`, `sym:*` x8, `dna:*` x3, `crp:high`, `stress:high`, `mood:low`, `event:*` x8. Append new names at the end only, then retrain (B09).
 - Several anomalies for one signal: the most deviant is kept. `vitals_moving` counts the 5 vital signals only (not sleep), and only when 2 or more.
 - `event:<type>` value is severity rank 1-4 (low..extreme), not rule_based's 1/3/6/10 points; per type the most severe event wins, ties to the most recent.
 - Labels match `rule_based` exactly; `features.py` imports the private `_days_label` from `orbit/modules/scorer.py`, so do not rename it.
@@ -69,3 +69,16 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - `share_with_earth` is a frozenset: the JSON order is not the request order and can change between server runs, and duplicates merge. Compare as sets.
 - Re-ingesting the crew from a source (`upsert_crew`) resets consent to the defaults.
 - `pipeline.earth_packet(...)` already follows the saved consent; B16's outbox can reuse it. The endpoint sits after `GET /api/crew` in `orbit/api/app.py`.
+
+## B04 · Simulator v3: look-alikes and sensor faults
+
+- `sim.lookalikes`: `LookAlike(scenario, astronaut_id, day, nights, ...)`, sorted by day; `astronaut_id=None` = crew-wide (solar). Also in `sim.effects`. `sim.episodes` stays illnesses only.
+- `read()` now returns `events` (EVA, SLEEP_SHIFT, SOLAR_PARTICLE_EVENT); `sim.events()` gives the same list. IDs `f"{astronaut or 'CREW'}-{event_type}-{yyyymmdd}"`.
+- `labels()` mixes illnesses and look-alikes, sorted by mission day; filter with `label.should_alert`. Look-alike labels have no `symptom_onset`.
+- A solar event gives one label per astronaut: count false alarms per label, not per event (B06).
+- EVA event runs 13:00-19:00, after the 10:00 assessment: its points and its next-night HRV -15 % / HR +3 both show the next day.
+- Sensor faults: absurd values with `quality="bad"` and a note starting "Simulated sensor fault"; use `o.is_usable` when averaging raw readings. Missing data: no wearable records for 1-2 nights.
+- Random rates per astronaut per 90 days: EVA 2, sleep shift 1, sensor fault 2, missing data 1; solar 1 per 60 days for the crew. From day 22, inside the mission, no overlap with the same astronaut's look-alikes; may overlap an illness.
+- List mode contains exactly what is listed. Look-alike keys: `type`, `day`, `astronaut` (not for solar), `nights` (not for EVA).
+- `confounders=False, faults=False` is byte-identical to B03 (checked against main for seeds 1-3); look-alikes draw from their own generator.
+- Default 180 d x 4 crew, seed 1: 71 labels (6 viral, 2 respiratory, 15 EVA, 10 sleep shift, 12 solar, 16 sensor fault, 10 missing), 28 events, 31 bad readings. Counts are in the module docstring.

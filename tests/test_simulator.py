@@ -104,7 +104,8 @@ def test_mean_skin_temp_stays_near_personal_normal():
     batch = sim.read()
     for member in sim.crew:
         temps = [o.value for o in batch.observations
-                 if o.astronaut_id == member.astronaut_id and o.signal is SignalType.SKIN_TEMP]
+                 if o.astronaut_id == member.astronaut_id and o.signal is SignalType.SKIN_TEMP
+                 and o.is_usable]  # B04: faulty readings are stored but flagged bad
         mean = sum(temps) / len(temps)
         assert abs(mean - sim.normals[member.astronaut_id][SignalType.SKIN_TEMP]) < 0.2
 
@@ -190,10 +191,11 @@ def test_extra_lab_tests_start_on_symptom_day():
 def test_labels_are_consistent_and_deterministic(tmp_path):
     sim = MissionSimulator(days=180, seed=3)
     labels = sim.labels()
-    assert labels, "180 days x 4 crew should contain an illness"
+    assert any(label.should_alert for label in labels), "180 days x 4 crew should contain an illness"
     for label in labels:
-        assert label.symptom_onset >= label.onset
-        assert label.resolved > label.symptom_onset
+        if label.should_alert:  # B04: look-alikes have no symptom_onset
+            assert label.symptom_onset >= label.onset
+            assert label.resolved > label.symptom_onset
         assert label.onset >= sim.day_start(22)
     assert labels == MissionSimulator(days=180, seed=3).labels()
 
@@ -206,7 +208,7 @@ def test_random_episodes_follow_illness_rate():
     counts = []
     for seed in range(1, 6):
         sim = MissionSimulator(days=180, crew_size=4, seed=seed)
-        per_astronaut = Counter(label.astronaut_id for label in sim.labels())
+        per_astronaut = Counter(label.astronaut_id for label in sim.labels() if label.should_alert)
         counts += [per_astronaut[m.astronaut_id] for m in sim.crew]
         for member in sim.crew:
             own = [e for e in sim.episodes if e.astronaut_id == member.astronaut_id]
@@ -221,7 +223,9 @@ def test_illness_episodes_keep_records_valid():
     batch = MissionSimulator(days=180, seed=2).read()
     for obs in batch.observations:
         Observation.model_validate(obs.model_dump())
-        assert obs.quality is Quality.GOOD and obs.simulated is True
+        assert obs.simulated is True
+        # B04: only sensor-fault readings are bad, and they say so.
+        assert obs.quality is Quality.GOOD or obs.note.startswith("Simulated sensor fault")
 
 
 def test_bad_inline_scenarios_are_rejected():
@@ -250,3 +254,138 @@ def test_injected_vzv_turns_starter_pipeline_yellow_by_symptom_day():
               for day in range(30, 41)}
     assert levels[30] is AlertLevel.GREEN
     assert max(level.rank for level in levels.values()) >= AlertLevel.YELLOW.rank, levels
+
+
+# ---- B04: look-alikes and sensor faults -------------------------------------
+
+LOOKALIKE_TYPES = {"eva_exertion", "sleep_shift", "solar_particle_event",
+                   "sensor_fault", "missing_data"}
+
+
+def test_every_lookalike_label_should_not_alert():
+    sim = MissionSimulator(days=180)
+    labels = sim.labels()
+    kinds = {label.scenario.value for label in labels}
+    assert LOOKALIKE_TYPES <= kinds, "a default 180-day run has every look-alike type"
+    for label in labels:
+        assert label.should_alert is (label.scenario.value not in LOOKALIKE_TYPES)
+        if not label.should_alert:
+            assert label.symptom_onset is None and label.resolved > label.onset
+
+
+def test_faulty_readings_are_bad_with_a_note():
+    sim = MissionSimulator(days=180)
+    batch = sim.read()
+    bad = [o for o in batch.observations if o.quality is Quality.BAD]
+    assert bad
+    assert all(o.note and o.note.startswith("Simulated sensor fault") for o in bad)
+    assert all(not o.spec.is_plausible(o.value) for o in bad), "fault values are absurd"
+    expected = {(x.astronaut_id, x.fault_signal, day)
+                for x in sim.lookalikes if x.scenario.value == "sensor_fault"
+                for day in range(x.first_day, x.last_day + 1)}
+    start = sim.mission_start
+    found = {(o.astronaut_id, o.signal, (o.timestamp - start).days + 1) for o in bad}
+    missing_nights = {(x.astronaut_id, day) for x in sim.lookalikes
+                      if x.scenario.value == "missing_data"
+                      for day in range(x.first_day, x.last_day + 1)}
+    assert found == {e for e in expected if (e[0], e[2]) not in missing_nights}
+
+
+def test_missing_data_night_has_no_wearable_records():
+    sim = MissionSimulator(days=40, scenarios=[
+        {"type": "missing_data", "astronaut": "AST-03", "day": 30, "nights": 2}])
+    batch = sim.read()
+    wearable = Counter((o.astronaut_id, o.timestamp.date()) for o in batch.observations
+                       if o.source.value == "wearable")
+    for day in (30, 31):
+        date = sim.day_start(day).date()
+        assert wearable[("AST-03", date)] == 0
+        assert wearable[("AST-02", date)] == 7, "other astronauts are not affected"
+    assert wearable[("AST-03", sim.day_start(32).date())] == 7
+    checkins = [o for o in batch.observations if o.astronaut_id == "AST-03"
+                and o.timestamp.date() == sim.day_start(30).date() and o.source.value == "checkin"]
+    assert len(checkins) == 10, "only the wearable is missing"
+    [label] = sim.labels()
+    assert label.scenario.value == "missing_data" and label.should_alert is False
+
+
+def test_switching_lookalikes_off_changes_nothing_else(tmp_path):
+    off = MissionSimulator(days=180, confounders=False, faults=False)
+    assert off.lookalikes == [] and off.read().events == ()
+    assert all(label.should_alert for label in off.labels())
+
+    on = MissionSimulator(days=180)
+    assert on.episodes == off.episodes, "look-alikes have their own random generator"
+    on.lookalikes, on.effects = [], list(on.episodes)  # strip them out by hand
+    assert _jsonl(on, tmp_path, "a.jsonl") == _jsonl(off, tmp_path, "b.jsonl")
+
+
+def test_default_180_day_run_is_fast_and_identical(tmp_path):
+    start = time.perf_counter()
+    first = MissionSimulator(days=180, crew_size=4)
+    first.read()
+    assert time.perf_counter() - start < 5
+    second = MissionSimulator(days=180, crew_size=4)
+    assert _jsonl(first, tmp_path, "a.jsonl") == _jsonl(second, tmp_path, "b.jsonl")
+    assert first.read().events == second.read().events
+    assert first.labels() == second.labels()
+
+
+def test_inline_spacewalk_and_solar_event():
+    sim = MissionSimulator(days=40, scenarios=[
+        {"type": "eva_exertion", "astronaut": "AST-01", "day": 30},
+        {"type": "solar_particle_event", "day": 33, "nights": 2},
+    ])
+    assert sim.episodes == [], "list mode adds nothing that is not listed"
+    batch = sim.read()
+    eva, solar = batch.events
+    assert eva.event_id == "AST-01-eva-20270202" and eva.astronaut_id == "AST-01"
+    assert eva.start == sim.day_start(30) + timedelta(hours=13)
+    assert solar.event_id == "CREW-solar_particle_event-20270205"
+    assert solar.astronaut_id is None and solar.simulated is True
+
+    healthy = MissionSimulator(days=40, scenarios=[]).read()
+    def diff(signal, astronaut, day):
+        return (_values(batch, astronaut, signal)[day]
+                - _values(healthy, astronaut, signal)[day])
+    assert diff(SignalType.WORKLOAD, "AST-01", 30) == pytest.approx(3.0)
+    assert diff(SignalType.RESTING_HR, "AST-01", 31) == pytest.approx(3.0)
+    assert diff(SignalType.HRV_RMSSD, "AST-01", 31) < 0
+    assert diff(SignalType.SYMPTOM_FATIGUE, "AST-01", 31) == 0
+    for astronaut in ("AST-01", "AST-04"):
+        for day in (33, 34):
+            assert diff(SignalType.RADIATION_DOSE_DAILY, astronaut, day) > 0.25
+        assert diff(SignalType.RADIATION_DOSE_DAILY, astronaut, 35) == 0
+        assert diff(SignalType.SKIN_TEMP, astronaut, 34) == 0, "no body change"
+
+    labels = sim.labels()
+    solar_labels = [label for label in labels if label.scenario.value == "solar_particle_event"]
+    assert sorted(label.astronaut_id for label in solar_labels) == [
+        "AST-01", "AST-02", "AST-03", "AST-04"]
+    assert len(labels) == 5 and not any(label.should_alert for label in labels)
+
+
+def test_bad_inline_lookalikes_are_rejected():
+    for bad in (
+        [{"type": "solar_particle_event", "astronaut": "AST-01", "day": 30}],  # crew-wide
+        [{"type": "eva_exertion", "day": 30}],  # no astronaut
+        [{"type": "eva_exertion", "astronaut": "AST-01", "day": 30, "nights": 3}],
+        [{"type": "sleep_shift", "astronaut": "AST-01", "day": 30, "nights": 5}],
+        [{"type": "missing_data", "astronaut": "AST-01", "day": 50}],  # past the end
+        [{"type": "sensor_fault", "astronaut": "AST-01", "symptom_day": 30}],  # wrong key
+        [{"type": "missing_data", "astronaut": "AST-01", "day": 30, "nights": 2},
+         {"type": "sensor_fault", "astronaut": "AST-01", "day": 31}],  # overlap
+        [{"type": "nap", "astronaut": "AST-01", "day": 30}],
+    ):
+        with pytest.raises(ValueError):
+            MissionSimulator(days=40, scenarios=bad)
+
+
+def test_simulated_events_go_through_the_pipeline():
+    settings = load_settings(ROOT / "orbit.toml")
+    pipeline = Pipeline.from_settings(settings, store=Store(":memory:"))
+    sim = MissionSimulator(days=40, scenarios=[
+        {"type": "eva_exertion", "astronaut": "AST-02", "day": 30}])
+    report = pipeline.ingest(sim.read())
+    assert [e.event_id for e in pipeline.store.events("AST-02")] == ["AST-02-eva-20270202"]
+    assert report is not None

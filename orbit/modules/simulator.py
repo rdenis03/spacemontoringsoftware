@@ -2,9 +2,9 @@
 
 Generates a long mission for a crew, every daily record for every astronaut,
 so the analytics can be tested on months of data instead of three weeks of
-fixtures. Version 1 (B02) simulated a **healthy** crew; version 2 (B03) adds
-illness episodes with ground-truth labels; B04 adds look-alike episodes and
-sensor faults.
+fixtures. Version 1 (B02) simulated a **healthy** crew; version 2 (B03) added
+illness episodes with ground-truth labels; version 3 (B04) adds look-alikes
+(things that look like illness but are not) and sensor faults.
 
 Why: ORBIT compares each astronaut with their own normal, so the simulator
 gives each astronaut a personal normal and realistic night-to-night noise,
@@ -20,9 +20,13 @@ Options (all defaulted; the defaults are small so the contract test is fast):
     scenarios      "random"                 "random", or a list of scenario tables (below);
                                             [] gives a healthy crew
     illness_rate   1.0                      for "random": episodes per astronaut per 90 days
-    confounders    True                     B04: add look-alike episodes (ignored now)
-    faults         True                     B04: add sensor faults and missing nights (ignored now)
+    confounders    True                     for "random": add spacewalks, sleep shifts, solar events
+    faults         True                     for "random": add sensor faults and missing nights
     labels_path    None                     if set, read() also writes the labels as JSONL here
+
+In list mode (``scenarios`` is a list) the run contains **exactly** what is
+listed: no random illnesses, look-alikes or faults are added, whatever
+``illness_rate``, ``confounders`` and ``faults`` say.
 
 Daily records per astronaut (times in UTC):
 
@@ -65,31 +69,80 @@ Before day 0 the DNA rise is only visible when a weekly test falls in those
 days. Extra tests only happen during illness, so the *presence* of a test is a
 give-away: a learned model must not use it (B09).
 
+Look-alikes and faults (B04)
+---------------------------
+They should **not** alert. Each one is a ``LookAlike`` in ``self.lookalikes``
+(also callable as an effect) and gives ``ScenarioLabel``s with
+``should_alert=False`` and no ``symptom_onset``.
+
+* ``eva_exertion`` (confounder): an ``EVA`` event on day d, 13:00-19:00, for
+  that astronaut; workload +3 h that day (about 12 h); the next night HRV -15 %
+  and resting HR +3; no symptoms. The event starts after the 10:00 assessment,
+  so it counts from the next day.
+* ``sleep_shift`` (confounder): a ``SLEEP_SHIFT`` event from 00:00 of day d;
+  sleep -1.5 h for ``nights`` = 2-3 nights.
+* ``solar_particle_event`` (confounder): a crew-wide event (``astronaut_id``
+  None) from 03:00 of day d; radiation dose x2-5 for ``nights`` = 1-2 days; no
+  body change. Severity high from x4, else moderate. One label per astronaut.
+* ``sensor_fault`` (fault): ``nights`` = 1-3 nightly readings in a row of one
+  wearable signal get an absurd value (``FAULT_VALUES``), stored with
+  ``quality="bad"`` and a note. The rest of that night is normal.
+* ``missing_data`` (fault): no wearable records for ``nights`` = 1-2 nights.
+
+Event IDs are ``f"{astronaut or 'CREW'}-{event_type}-{yyyymmdd}"``.
+
 ``scenarios`` as a list of tables, for example in TOML::
 
     scenarios = [
       {type = "viral_reactivation", astronaut = "AST-02", virus = "vzv", symptom_day = 90},
       {type = "respiratory_infection", astronaut = "AST-01", symptom_day = 40, recovery_days = 6},
+      {type = "eva_exertion", astronaut = "AST-01", day = 50},
+      {type = "solar_particle_event", day = 60, nights = 2},
     ]
 
-Keys: ``type``, ``astronaut``, ``symptom_day`` (required), ``virus`` (required
-for viral), ``lead_days``, ``recovery_days`` (optional). ``"random"`` places
-about ``illness_rate * days / 90`` episodes per astronaut (Poisson), 70 % viral
-(any virus) and 30 % respiratory, never starting before day 22 (so a baseline
-exists), always ending inside the mission, at least ``EPISODE_GAP_DAYS`` apart
-for one astronaut.
+Illness keys: ``type``, ``astronaut``, ``symptom_day`` (required), ``virus``
+(required for viral), ``lead_days``, ``recovery_days`` (optional).
+Look-alike keys: ``type``, ``day`` (required), ``astronaut`` (required, except
+for ``solar_particle_event``, which is crew-wide and must not have one),
+``nights`` (optional, in the ranges above; not for ``eva_exertion``).
 
-Each episode gives one ``ScenarioLabel``: ``onset`` = 00:00 of the first day
+``"random"`` places about ``illness_rate * days / 90`` illness episodes per
+astronaut (Poisson), 70 % viral (any virus) and 30 % respiratory, never
+starting before day 22 (so a baseline exists), always ending inside the
+mission, at least ``EPISODE_GAP_DAYS`` apart for one astronaut. With
+``confounders`` and ``faults`` it adds look-alikes at the rates in
+``LOOKALIKE_RATES`` (per astronaut per 90 days) and ``SOLAR_EVENTS_PER_60_DAYS``
+(crew), also from day 22, inside the mission, never overlapping another
+look-alike of the same astronaut. Look-alikes may overlap an illness.
+
+Each illness gives one ``ScenarioLabel``: ``onset`` = 00:00 of the first day
 the vitals change, ``symptom_onset`` = day 0 at 07:00, ``resolved`` = 00:00 of
-day ``recovery_days`` (back to normal), ``should_alert=True``.
+day ``recovery_days`` (back to normal), ``should_alert=True``. A look-alike
+label runs from 00:00 of day d to 00:00 of the day after its last effect.
+
+Default 180-day, 4-person run (seed 1), labels per type, for sanity checks
+(B06, B09)::
+
+    viral_reactivation       6   should alert
+    respiratory_infection    2   should alert
+    eva_exertion            15
+    sleep_shift             10
+    solar_particle_event    12   (3 crew-wide events x 4 astronauts)
+    sensor_fault            16   (31 readings stored with quality "bad")
+    missing_data            10
+    total                   71   28 events, 13 928 observations
+
+Other seeds give similar numbers (Poisson draws), not the same ones.
 
 Randomness: ``random.Random(seed)`` draws the crew's normals in ``__init__``,
-then a seed for the noise, then a seed for the episodes, so ``read()`` gives
-byte-identical output every time it is called, and adding episodes never
-changes the healthy noise. No global random state, no clock.
+then a seed for the noise, a seed for the illnesses and a seed for the
+look-alikes, so ``read()`` gives byte-identical output every time it is
+called. Adding episodes never changes the healthy noise: a missing night or a
+faulty reading still uses up its noise draw. ``confounders=False,
+faults=False`` reproduces B03's output exactly. No global random state, no clock.
 
-Hook for B04 (effects)
-----------------------
+Hook (effects)
+--------------
 ``self.normals[astronaut_id][signal]`` holds each astronaut's personal normal
 (nightly signals only), available right after ``__init__``.
 
@@ -107,9 +160,11 @@ effect. For a relative change, use the normal, for example
 Symptoms and mood/stress are rounded to whole numbers and clamped to their
 scale. Lab offsets apply only on weekly lab days (mission days 1, 8, 15, ...).
 
-Every illness ``Episode`` in ``self.episodes`` is also in ``self.effects``
-(an episode is callable as an effect). Its extra lab tests come from
-``Episode.extra_labs(mission_day, weekly)``.
+Every illness ``Episode`` in ``self.episodes`` and every ``LookAlike`` in
+``self.lookalikes`` is also in ``self.effects`` (both are callable as
+effects). Extra lab tests come from ``Episode.extra_labs(mission_day, weekly)``;
+missing nights and faulty readings from ``LookAlike.missing`` and
+``LookAlike.fault``.
 """
 
 from __future__ import annotations
@@ -123,11 +178,16 @@ from datetime import datetime, timedelta, timezone
 from orbit.core.interfaces import SourceBatch
 from orbit.core.registry import register
 from orbit.schema import (
+    ContextEvent,
     CrewMember,
+    EventType,
     Observation,
+    Quality,
     ScenarioLabel,
     ScenarioType,
+    Severity,
     SignalType,
+    Source,
     get_spec,
     write_labels,
 )
@@ -172,6 +232,7 @@ SYMPTOMS = (
 )
 SALIVA = (S.SALIVA_EBV_DNA, S.SALIVA_VZV_DNA, S.SALIVA_HSV1_DNA)
 HEALTHY_SALIVA_MAX = 99  # copies/mL; healthy shedding stays below 100
+HEALTHY_DOSE = 0.30  # mGy per day
 LAB_EVERY_DAYS = 7
 
 WAKE_UP = timedelta(hours=6)
@@ -214,7 +275,49 @@ FIRST_EPISODE_DAY = 22  # nothing changes in the first 21 days, so a baseline ex
 EPISODE_GAP_DAYS = 7  # healthy days between two episodes of one astronaut
 DEFAULT_LEAD = {ScenarioType.VIRAL_REACTIVATION: 2, ScenarioType.RESPIRATORY_INFECTION: 1}
 ILLNESSES = tuple(DEFAULT_LEAD)
-SCENARIO_KEYS = {"type", "astronaut", "symptom_day", "virus", "lead_days", "recovery_days"}
+ILLNESS_KEYS = {"type", "astronaut", "symptom_day", "virus", "lead_days", "recovery_days"}
+
+# ---- look-alikes and faults (B04) -------------------------------------------
+
+T = ScenarioType
+CONFOUNDERS = (T.EVA_EXERTION, T.SLEEP_SHIFT, T.SOLAR_PARTICLE_EVENT)
+FAULTS = (T.SENSOR_FAULT, T.MISSING_DATA)
+LOOKALIKE_KEYS = {"type", "astronaut", "day", "nights"}
+# How many days each look-alike lasts. A spacewalk always covers its day and the next night.
+NIGHTS: dict[ScenarioType, tuple[int, int]] = {
+    T.EVA_EXERTION: (2, 2),
+    T.SLEEP_SHIFT: (2, 3),
+    T.SOLAR_PARTICLE_EVENT: (1, 2),
+    T.SENSOR_FAULT: (1, 3),
+    T.MISSING_DATA: (1, 2),
+}
+# "random": per astronaut per 90 days.
+LOOKALIKE_RATES: dict[ScenarioType, float] = {
+    T.EVA_EXERTION: 2.0,
+    T.SLEEP_SHIFT: 1.0,
+    T.SENSOR_FAULT: 2.0,
+    T.MISSING_DATA: 1.0,
+}
+SOLAR_EVENTS_PER_60_DAYS = 1.0  # crew-wide
+EVA_WORKLOAD = 3.0  # h added to a normal 8.5-10 h day
+EVA_HRV = -0.15  # fraction of the normal, the next night
+EVA_HR = 3.0
+SLEEP_SHIFT_HOURS = -1.5
+SOLAR_DOSE_FACTOR = (2.0, 5.0)
+# Absurd values a broken sensor reports, outside the plausible range.
+FAULT_VALUES: dict[SignalType, tuple[float, str]] = {
+    S.SKIN_TEMP: (24.0, "loose strap, skin temperature reads cabin air"),
+    S.RESTING_HR: (230.0, "motion artefact, heart rate spike"),
+    S.SPO2: (40.0, "poor sensor contact, SpO2 dropout"),
+    S.RESP_RATE: (0.0, "breathing rate dropout"),
+}
+LOOKALIKE_NAMES = {
+    T.EVA_EXERTION: "Spacewalk",
+    T.SLEEP_SHIFT: "Sleep schedule shift",
+    T.SOLAR_PARTICLE_EVENT: "Solar particle event",
+    T.SENSOR_FAULT: "Sensor fault",
+    T.MISSING_DATA: "Missing wearable data",
+}
 
 
 @dataclass(frozen=True)
@@ -323,6 +426,93 @@ class Episode:
         return 10 ** (DNA_FLOOR_LOG + (self.lab_peak - DNA_FLOOR_LOG) * shape)
 
 
+@dataclass(frozen=True)
+class LookAlike:
+    """Something that looks like illness but is not. Callable as an effect."""
+
+    scenario: ScenarioType
+    astronaut_id: str | None  # None: the whole crew (solar particle event)
+    day: int  # mission day it starts
+    nights: int  # how many days it lasts (see NIGHTS)
+    hrv_normal: float = 0.0  # spacewalk: the astronaut's HRV normal
+    dose_factor: float = 1.0  # solar particle event
+    fault_signal: SignalType | None = None  # sensor fault
+
+    @property
+    def first_day(self) -> int:
+        return self.day
+
+    @property
+    def last_day(self) -> int:
+        return self.day + self.nights - 1
+
+    def _hits(self, astronaut: str, mission_day: int) -> bool:
+        return (self.astronaut_id in (None, astronaut)
+                and self.first_day <= mission_day <= self.last_day)
+
+    def __call__(self, astronaut: str, mission_day: int) -> dict[SignalType, float]:
+        if not self._hits(astronaut, mission_day):
+            return {}
+        if self.scenario is T.EVA_EXERTION:
+            if mission_day == self.day:
+                return {S.WORKLOAD: EVA_WORKLOAD}
+            return {S.HRV_RMSSD: EVA_HRV * self.hrv_normal, S.RESTING_HR: EVA_HR}
+        if self.scenario is T.SLEEP_SHIFT:
+            return {S.SLEEP_DURATION: SLEEP_SHIFT_HOURS}
+        if self.scenario is T.SOLAR_PARTICLE_EVENT:
+            return {S.RADIATION_DOSE_DAILY: (self.dose_factor - 1) * HEALTHY_DOSE}
+        return {}
+
+    def missing(self, astronaut: str, mission_day: int) -> bool:
+        """True if this astronaut's wearable records are missing on this day."""
+        return self.scenario is T.MISSING_DATA and self._hits(astronaut, mission_day)
+
+    def fault(self, astronaut: str, mission_day: int, signal: SignalType) -> tuple[float, str] | None:
+        """(absurd value, note) if this reading comes from a broken sensor."""
+        if (self.scenario is T.SENSOR_FAULT and signal is self.fault_signal
+                and self._hits(astronaut, mission_day)):
+            value, reason = FAULT_VALUES[signal]
+            return value, f"Simulated sensor fault: {reason}"
+        return None
+
+    def event(self, day_start: Callable[[int], datetime]) -> ContextEvent | None:
+        kind = {T.EVA_EXERTION: EventType.EVA, T.SLEEP_SHIFT: EventType.SLEEP_SHIFT,
+                T.SOLAR_PARTICLE_EVENT: EventType.SOLAR_PARTICLE_EVENT}.get(self.scenario)
+        if kind is None:
+            return None
+        start = day_start(self.day)
+        if self.scenario is T.EVA_EXERTION:
+            start, end, source = start + timedelta(hours=13), start + timedelta(hours=19), Source.MANUAL
+            severity, text = Severity.MODERATE, "Spacewalk (simulated)"
+        elif self.scenario is T.SLEEP_SHIFT:
+            end, source = day_start(self.day + self.nights), Source.MANUAL
+            severity, text = Severity.MODERATE, f"Sleep schedule shift for {self.nights} nights (simulated)"
+        else:
+            start, end, source = start + timedelta(hours=3), day_start(self.day + self.nights), Source.GROUND
+            severity = Severity.HIGH if self.dose_factor >= 4 else Severity.MODERATE
+            text = f"Solar particle event, dose x{self.dose_factor:.1f} (simulated)"
+        return ContextEvent(
+            event_id=f"{self.astronaut_id or 'CREW'}-{kind.value}-{day_start(self.day):%Y%m%d}",
+            event_type=kind, start=start, end=end, severity=severity,
+            astronaut_id=self.astronaut_id, source=source, description=text, simulated=True,
+        )
+
+    def labels(self, crew_ids: list[str], day_start: Callable[[int], datetime]) -> list[ScenarioLabel]:
+        name = LOOKALIKE_NAMES[self.scenario]
+        detail = f" ({self.fault_signal.value})" if self.fault_signal else ""
+        return [
+            ScenarioLabel(
+                label_id=f"{astronaut}-{self.scenario.value}-d{self.day:03d}",
+                astronaut_id=astronaut, scenario=self.scenario,
+                onset=day_start(self.first_day), resolved=day_start(self.last_day + 1),
+                should_alert=False,
+                notes=f"{name}{detail}: day {self.day}, {self.nights} d"
+                      + (", crew-wide" if self.astronaut_id is None else ""),
+            )
+            for astronaut in ([self.astronaut_id] if self.astronaut_id else crew_ids)
+        ]
+
+
 def _parse_start(value: str | datetime) -> datetime:
     start = value if isinstance(value, datetime) else datetime.fromisoformat(
         value.replace("Z", "+00:00"))
@@ -380,7 +570,6 @@ class MissionSimulator:
         self.mission_start = _parse_start(mission_start)
         self.scenarios = scenarios
         self.illness_rate = illness_rate
-        # Stored for B04; not used yet.
         self.confounders = confounders
         self.faults = faults
         self.labels_path = labels_path
@@ -407,13 +596,18 @@ class MissionSimulator:
         self._noise_seed = rng.getrandbits(64)
         # Drawn after the noise seed, so healthy values do not depend on the episodes.
         episode_rng = random.Random(rng.getrandbits(64))
+        lookalike_rng = random.Random(rng.getrandbits(64))
 
+        if scenarios == "random":
+            episodes = self._random_episodes(episode_rng)
+            lookalikes = self._random_lookalikes(lookalike_rng)
+        else:
+            episodes, lookalikes = self._inline_scenarios(scenarios, episode_rng)
         self.episodes: list[Episode] = sorted(
-            self._random_episodes(episode_rng) if scenarios == "random"
-            else self._inline_episodes(scenarios, episode_rng),
-            key=lambda e: (e.symptom_day, e.astronaut_id),
-        )
-        self.effects: list[Effect] = list(self.episodes)
+            episodes, key=lambda e: (e.symptom_day, e.astronaut_id))
+        self.lookalikes: list[LookAlike] = sorted(
+            lookalikes, key=lambda x: (x.day, x.astronaut_id or "", x.scenario.value))
+        self.effects: list[Effect] = [*self.episodes, *self.lookalikes]
 
     # ---- public ---------------------------------------------------------
 
@@ -428,12 +622,27 @@ class MissionSimulator:
             source_name="simulator",
             crew=self.crew,
             observations=tuple(observations),
-            events=(),
+            events=tuple(self.events()),
         )
 
+    def events(self) -> list[ContextEvent]:
+        """Spacewalks, sleep shifts and solar particle events, by start time."""
+        found = [x.event(self.day_start) for x in self.lookalikes]
+        return sorted((e for e in found if e is not None), key=lambda e: (e.start, e.event_id))
+
     def labels(self) -> list[ScenarioLabel]:
-        """Ground truth for M9: one label per injected episode, by onset."""
-        return [episode.label(self.day_start) for episode in self.episodes]
+        """Ground truth for M9: illnesses (should alert) and look-alikes (should not).
+
+        Sorted by mission day (symptom day for an illness, start day for a
+        look-alike), then astronaut; illnesses keep B03's order.
+        """
+        crew_ids = [m.astronaut_id for m in self.crew]
+        keyed = [((e.symptom_day, e.astronaut_id, 0), e.label(self.day_start))
+                 for e in self.episodes]
+        for x in self.lookalikes:
+            keyed += [((x.day, label.astronaut_id, 1), label)
+                      for label in x.labels(crew_ids, self.day_start)]
+        return [label for _, label in sorted(keyed, key=lambda pair: pair[0])]
 
     def day_start(self, mission_day: int) -> datetime:
         return self.mission_start + timedelta(days=mission_day - 1)
@@ -493,52 +702,125 @@ class MissionSimulator:
                         break
         return episodes
 
-    def _inline_episodes(self, tables, rng: random.Random) -> list[Episode]:
+    def _random_lookalikes(self, rng: random.Random) -> list[LookAlike]:
+        kinds = [k for k in LOOKALIKE_RATES
+                 if (k in CONFOUNDERS and self.confounders) or (k in FAULTS and self.faults)]
+        placed: list[LookAlike] = []
+        for member in self.crew:
+            for kind in kinds:
+                for _ in range(_poisson(rng, LOOKALIKE_RATES[kind] * self.days / 90)):
+                    self._place_lookalike(rng, kind, member.astronaut_id, placed)
+        if self.confounders:
+            for _ in range(_poisson(rng, SOLAR_EVENTS_PER_60_DAYS * self.days / 60)):
+                self._place_lookalike(rng, T.SOLAR_PARTICLE_EVENT, None, placed)
+        return placed
+
+    def _place_lookalike(self, rng: random.Random, kind: ScenarioType,
+                         astronaut: str | None, placed: list[LookAlike]) -> None:
+        draft = self._draw_lookalike(rng, kind, astronaut, FIRST_EPISODE_DAY)
+        latest = self.days - draft.nights + 1
+        for _attempt in range(50):
+            if latest < FIRST_EPISODE_DAY:
+                return
+            candidate = replace(draft, day=rng.randint(FIRST_EPISODE_DAY, latest))
+            if not _overlaps(candidate, placed):
+                placed.append(candidate)
+                return
+
+    def _draw_lookalike(self, rng: random.Random, kind: ScenarioType, astronaut: str | None,
+                        day: int, nights: int | None = None) -> LookAlike:
+        """Fill in the random details of one look-alike (always in the same draw order)."""
+        if nights is None:
+            nights = rng.randint(*NIGHTS[kind])
+        extra: dict = {}
+        if kind is T.EVA_EXERTION:
+            extra["hrv_normal"] = self.normals[astronaut][S.HRV_RMSSD]
+        elif kind is T.SOLAR_PARTICLE_EVENT:
+            extra["dose_factor"] = rng.uniform(*SOLAR_DOSE_FACTOR)
+        elif kind is T.SENSOR_FAULT:
+            extra["fault_signal"] = rng.choice(tuple(FAULT_VALUES))
+        return LookAlike(scenario=kind, astronaut_id=astronaut, day=day, nights=nights, **extra)
+
+    def _inline_scenarios(self, tables, rng: random.Random) -> tuple[list[Episode], list[LookAlike]]:
         if isinstance(tables, str) or not isinstance(tables, (list, tuple)):
             raise ValueError(f'scenarios must be "random" or a list of tables, got {tables!r}')
         crew = {m.astronaut_id for m in self.crew}
         episodes: list[Episode] = []
+        lookalikes: list[LookAlike] = []
         for n, table in enumerate(tables, start=1):
             where = f"scenario {n}"
             if not isinstance(table, Mapping):
                 raise ValueError(f"{where}: expected a table, got {table!r}")
-            unknown = set(table) - SCENARIO_KEYS
-            if unknown:
-                raise ValueError(f"{where}: unknown keys {sorted(unknown)}")
-            missing = {"type", "astronaut", "symptom_day"} - set(table)
-            if missing:
-                raise ValueError(f"{where}: missing keys {sorted(missing)}")
             try:
-                scenario = ScenarioType(table["type"])
+                scenario = ScenarioType(table.get("type"))
             except ValueError:
-                scenario = None
-            if scenario not in ILLNESSES:
-                raise ValueError(f"{where}: type must be one of {[s.value for s in ILLNESSES]}")
-            astronaut = table["astronaut"]
-            if astronaut not in crew:
-                raise ValueError(f"{where}: unknown astronaut {astronaut!r}")
-            virus = table.get("virus")
-            if scenario is ScenarioType.VIRAL_REACTIVATION:
-                if virus not in VIRUSES:
-                    raise ValueError(f"{where}: virus must be one of {list(VIRUSES)}")
-            elif virus is not None:
-                raise ValueError(f"{where}: virus is only for viral_reactivation")
-            lead = table.get("lead_days")
-            if lead is not None and not LEAD_DAYS[0] <= lead <= LEAD_DAYS[1]:
-                raise ValueError(f"{where}: lead_days must be {LEAD_DAYS[0]} to {LEAD_DAYS[1]}")
-            recovery = table.get("recovery_days")
-            if recovery is not None and not RECOVERY_DAYS[0] <= recovery <= RECOVERY_DAYS[1]:
                 raise ValueError(
-                    f"{where}: recovery_days must be {RECOVERY_DAYS[0]} to {RECOVERY_DAYS[1]}")
-            episode = self._draw_episode(rng, scenario, astronaut, int(table["symptom_day"]),
-                                         virus, lead, recovery)
-            if episode.first_day < 1 or episode.symptom_day > self.days:
-                raise ValueError(f"{where}: symptom_day {episode.symptom_day} does not fit "
-                                 f"in a {self.days}-day mission")
-            if _overlaps(episode, episodes):
-                raise ValueError(f"{where}: overlaps another episode of {astronaut}")
-            episodes.append(episode)
-        return episodes
+                    f"{where}: type must be one of {[s.value for s in ScenarioType]}") from None
+            if scenario in ILLNESSES:
+                episodes.append(self._inline_episode(where, table, scenario, crew, episodes, rng))
+            else:
+                lookalikes.append(self._inline_lookalike(where, table, scenario, crew,
+                                                         lookalikes, rng))
+        return episodes, lookalikes
+
+    def _inline_lookalike(self, where, table, scenario, crew, others, rng) -> LookAlike:
+        unknown = set(table) - LOOKALIKE_KEYS
+        if unknown:
+            raise ValueError(f"{where}: unknown keys {sorted(unknown)}")
+        if "day" not in table:
+            raise ValueError(f"{where}: missing key 'day'")
+        astronaut = table.get("astronaut")
+        if scenario is T.SOLAR_PARTICLE_EVENT:
+            if astronaut is not None:
+                raise ValueError(f"{where}: solar_particle_event is crew-wide; leave out 'astronaut'")
+        elif astronaut not in crew:
+            raise ValueError(f"{where}: unknown or missing astronaut {astronaut!r}")
+        nights = table.get("nights")
+        if nights is not None:
+            lo, hi = NIGHTS[scenario]
+            if scenario is T.EVA_EXERTION or not lo <= nights <= hi:
+                raise ValueError(f"{where}: nights for {scenario.value} must be {lo} to {hi}"
+                                 if scenario is not T.EVA_EXERTION
+                                 else f"{where}: eva_exertion has no 'nights'")
+        lookalike = self._draw_lookalike(rng, scenario, astronaut, int(table["day"]), nights)
+        if lookalike.first_day < 1 or lookalike.last_day > self.days:
+            raise ValueError(f"{where}: day {lookalike.day} does not fit "
+                             f"in a {self.days}-day mission")
+        if _overlaps(lookalike, others):
+            raise ValueError(f"{where}: overlaps another look-alike of {astronaut or 'the crew'}")
+        return lookalike
+
+    def _inline_episode(self, where, table, scenario, crew, episodes, rng) -> Episode:
+        unknown = set(table) - ILLNESS_KEYS
+        if unknown:
+            raise ValueError(f"{where}: unknown keys {sorted(unknown)}")
+        missing = {"type", "astronaut", "symptom_day"} - set(table)
+        if missing:
+            raise ValueError(f"{where}: missing keys {sorted(missing)}")
+        astronaut = table["astronaut"]
+        if astronaut not in crew:
+            raise ValueError(f"{where}: unknown astronaut {astronaut!r}")
+        virus = table.get("virus")
+        if scenario is ScenarioType.VIRAL_REACTIVATION:
+            if virus not in VIRUSES:
+                raise ValueError(f"{where}: virus must be one of {list(VIRUSES)}")
+        elif virus is not None:
+            raise ValueError(f"{where}: virus is only for viral_reactivation")
+        lead = table.get("lead_days")
+        if lead is not None and not LEAD_DAYS[0] <= lead <= LEAD_DAYS[1]:
+            raise ValueError(f"{where}: lead_days must be {LEAD_DAYS[0]} to {LEAD_DAYS[1]}")
+        recovery = table.get("recovery_days")
+        if recovery is not None and not RECOVERY_DAYS[0] <= recovery <= RECOVERY_DAYS[1]:
+            raise ValueError(
+                f"{where}: recovery_days must be {RECOVERY_DAYS[0]} to {RECOVERY_DAYS[1]}")
+        episode = self._draw_episode(rng, scenario, astronaut, int(table["symptom_day"]),
+                                     virus, lead, recovery)
+        if episode.first_day < 1 or episode.symptom_day > self.days:
+            raise ValueError(f"{where}: symptom_day {episode.symptom_day} does not fit "
+                             f"in a {self.days}-day mission")
+        if _overlaps(episode, episodes):
+            raise ValueError(f"{where}: overlaps another episode of {astronaut}")
+        return episode
 
     # ---- generation -----------------------------------------------------
 
@@ -557,6 +839,8 @@ class MissionSimulator:
         innovation = (1 - PHI**2) ** 0.5  # keeps the AR(1) noise at the stated SD
         device = f"wrist-{astronaut.lower()}"
         episodes = [e for e in self.episodes if e.astronaut_id == astronaut]
+        faults = [x for x in self.lookalikes if x.scenario in FAULTS
+                  and x.astronaut_id == astronaut]
         records: list[Observation] = []
 
         for mission_day in range(1, self.days + 1):
@@ -579,9 +863,20 @@ class MissionSimulator:
             def ordinal(signal: SignalType, healthy: float) -> int:
                 return int(_clamp(signal, round(healthy + offsets.get(signal, 0.0))))
 
-            # 06:00 nightly vitals and sleep
+            # 06:00 nightly vitals and sleep. A missing night or a broken sensor
+            # still uses up its noise draw, so no other value changes.
+            missing = any(x.missing(astronaut, mission_day) for x in faults)
             for signal in NIGHTLY:
                 noise[signal] = PHI * noise[signal] + innovation * rng.gauss(0, sd[signal])
+                if missing:
+                    continue
+                broken = next((f for x in faults
+                               if (f := x.fault(astronaut, mission_day, signal))), None)
+                if broken:
+                    value, note = broken
+                    add(signal, value, "wearable", date + WAKE_UP, device_id=device,
+                        quality=Quality.BAD, note=note)
+                    continue
                 add(signal, continuous(signal, normals[signal] + noise[signal]),
                     "wearable", date + WAKE_UP, device_id=device)
 
@@ -607,7 +902,7 @@ class MissionSimulator:
 
             # 23:59 environment
             add(S.RADIATION_DOSE_DAILY,
-                continuous(S.RADIATION_DOSE_DAILY, 0.30 + rng.gauss(0, 0.02)),
+                continuous(S.RADIATION_DOSE_DAILY, HEALTHY_DOSE + rng.gauss(0, 0.02)),
                 "environment", date + END_OF_DAY)
             add(S.WORKLOAD, continuous(S.WORKLOAD, rng.choice((8.5, 9.0, 9.5, 10.0))),
                 "environment", date + END_OF_DAY)
