@@ -60,3 +60,12 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - B09: extra tests only happen during illness, so the presence of a test gives the answer away. Learn from test values only, never from whether a test exists.
 - B04: add look-alikes to `sim.effects`; draw their randomness from a new generator (or after the episode seed) so existing values stay identical.
 - Starter modules on VZV, symptom day 40: green 24.9 on day -1, orange on day 0. The warning comes on symptom day, not before; a stronger ramp or B08-B10 could make it earlier.
+
+## B14 · Consent editing endpoint
+
+- `PUT /api/crew/{astronaut_id}/consent`, body `ConsentUpdate {"share_with_earth": [SignalCategory, ...]}`, returns the updated `CrewMember`; other fields are kept.
+- Unknown category gives 422 (pydantic message lists the allowed values); unknown astronaut gives 404; `[]` is allowed and shares no readings.
+- Score and level still go to Earth whatever the consent (the consent gate's rule), so a hidden emergency is impossible.
+- `share_with_earth` is a frozenset: the JSON order is not the request order and can change between server runs, and duplicates merge. Compare as sets.
+- Re-ingesting the crew from a source (`upsert_crew`) resets consent to the defaults.
+- `pipeline.earth_packet(...)` already follows the saved consent; B16's outbox can reuse it. The endpoint sits after `GET /api/crew` in `orbit/api/app.py`.
