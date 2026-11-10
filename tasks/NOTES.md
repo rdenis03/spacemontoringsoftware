@@ -209,3 +209,17 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - Report: `reports/learned_vs_starter.json` (committed; `reports/` is not git-ignored, unlike `data/reports/`). Its config `path` fields were made relative by hand after the run; a rerun writes absolute paths again.
 - Numbers are in README *Results* ("Learned scorer vs starter") and in the `scorer_learned.py` docstring, marked simulated.
 - B18: thresholds for auto-send come from rule_based, as before.
+
+## B18 · Auto-send on orange or red
+
+- `[comms] auto_send_level` in orbit.toml: "off", "yellow", "orange" or "red" (default "orange"; anything else is a `ConfigError`). It becomes `Settings.comms_auto_send_level`; allowed values are `AUTO_SEND_LEVELS` in `orbit/core/config.py`.
+- `create_app(..., auto_send_level="off")`: the default in `create_app` is "off", so tests that build the app without the option see an empty outbox. `cmd_serve` and `create_app_from_settings` pass the config value.
+- `orbit/__main__.py` changed by one line (with the team's agreement): `cmd_serve` passes `auto_send_level`. Without it `serve` would ignore the setting.
+- `auto_send(result: DayResult)` inside `create_app`: registered with `pipeline.on("assessed", ...)` and run once at startup on every astronaut's `pipeline.status()`, because `serve` assesses before the app exists.
+- It queues `OutboxEntry(id=f"auto-{astronaut}-{as_of:%Y%m%d}", auto=True, summary=build_report(member, packet, result.actions))` with the config's delay; the packet covers `AUTO_SEND_DAYS` (3) days up to `as_of`.
+- One per astronaut per assessment day (UTC date of `as_of`, mission time). An id already in the outbox is left alone, so a second check-in, a restart on the same database or a rerun does not send again or reset the countdown.
+- `POST /api/pipeline/run` over the whole history queues one packet for every past orange or red day that has none yet.
+- The packet goes through the consent gate like a manual one. Unsaved assessments (`assess(save=False)`) send nothing.
+- Never raises: a failed send is logged on `orbit.api` and does not show in `DayResult.errors`.
+- `GET /api/health` returns `comms.auto_send_level`; `GET /api/outbox` items have `auto: true` for these packets.
+- Checked with a real `serve` on a scratch database: `auto-AST-01-20270403` is queued right after startup, 1200 s left.

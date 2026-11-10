@@ -20,6 +20,7 @@ dashboard and the command line always show exactly the same results.
     POST /api/crew/{id}/earth-packet/send    package and queue for Earth with the comms delay (M13);
                                              adds a one-line report for the flight surgeon
     GET  /api/outbox                         queued and delivered packets (M13)
+                                             (``auto``: queued by ORBIT itself on orange or red)
     GET  /api/events                         stress events (solar, EVA ...)
     POST /api/observations                   push readings from a device or feed (M3)
     POST /api/pipeline/run                   re-run the assessments
@@ -29,6 +30,7 @@ Interactive docs: http://localhost:8000/docs once the server runs.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Callable
 from datetime import date, datetime, timedelta, timezone
@@ -44,6 +46,7 @@ from orbit.core.store import OutboxEntry
 from orbit.schema import (
     SCHEMA_VERSION,
     ActionCard,
+    AlertLevel,
     Baseline,
     ContextEvent,
     CrewMember,
@@ -57,6 +60,11 @@ from orbit.schema import (
 from orbit.schema.export import registry_document
 
 from .earth_report import build_report
+
+log = logging.getLogger("orbit.api")
+
+AUTO_SEND_DAYS = 3
+"""An auto packet covers this many days up to the assessment (B18)."""
 
 # ---- request and response bodies --------------------------------------------
 
@@ -140,11 +148,18 @@ def create_app(
     mission_name: str = "ORBIT mission",
     comms_delay_minutes: float = 20.0,
     clock: Callable[[], datetime] | None = None,
+    auto_send_level: str = "off",
 ) -> FastAPI:
     """Build the API. ``clock`` (UTC) drives the comms queue; tests pass a fixed one.
 
     Comms delay is real time, not mission time, so the demo countdown is visible.
+
+    ``auto_send_level`` ("yellow", "orange", "red" or "off"; B18): when an
+    assessment reaches this level, ORBIT queues a packet for Earth by itself,
+    at most one per astronaut per assessment day. The default here is "off";
+    ``serve`` passes ``[comms] auto_send_level`` from orbit.toml (default "orange").
     """
+    auto_level = None if auto_send_level == "off" else AlertLevel(auto_send_level)
     now = clock or (lambda: datetime.now(timezone.utc))
     app = FastAPI(
         title="ORBIT API",
@@ -203,7 +218,8 @@ def create_app(
     def health() -> dict[str, Any]:
         return {"status": "ok", "mission": mission_name, "schema_version": SCHEMA_VERSION,
                 "modules": pipeline.module_names, "counts": store.counts(),
-                "comms": {"one_way_delay_minutes": comms_delay_minutes}}
+                "comms": {"one_way_delay_minutes": comms_delay_minutes,
+                          "auto_send_level": auto_send_level}}
 
     @app.get("/api/signals")
     def signals() -> dict[str, Any]:
@@ -386,6 +402,51 @@ def create_app(
         store.queue(entry)
         return outbox_item(entry)
 
+    def auto_send(result: DayResult) -> None:
+        """Queue a packet for Earth when an assessment reaches ``auto_send_level`` (B18).
+
+        Registered on the pipeline's "assessed" hook and run once at startup.
+        One packet per astronaut per assessment day (the UTC date of ``as_of``):
+        its id is ``auto-<astronaut>-<yyyymmdd>``, and an id already in the
+        outbox is left alone. Never raises: a failed send must not break an
+        assessment.
+        """
+        try:
+            assessment = result.assessment
+            if auto_level is None or assessment is None:
+                return
+            if assessment.level.rank < auto_level.rank:
+                return
+            packet_id = f"auto-{result.astronaut_id}-{result.as_of:%Y%m%d}"
+            if any(entry.id == packet_id for entry in store.outbox(result.astronaut_id)):
+                return
+            member = store.member(result.astronaut_id)
+            if member is None:
+                return
+            packet = pipeline.earth_packet(
+                result.astronaut_id, result.as_of - timedelta(days=AUTO_SEND_DAYS), result.as_of)
+            if all(a.assessment_id != assessment.assessment_id for a in packet.assessments):
+                return  # the assessment was not saved (a preview): nothing to report
+            created = now()
+            store.queue(OutboxEntry(
+                id=packet_id, astronaut_id=result.astronaut_id, created_at=created,
+                deliver_at=created + timedelta(minutes=comms_delay_minutes),
+                packet=packet, summary=build_report(member, packet, result.actions), auto=True,
+            ))
+        except Exception:
+            log.exception("auto-send failed for %s at %s", result.astronaut_id, result.as_of)
+
+    if auto_level is not None:
+        pipeline.on("assessed", auto_send)
+        # `serve` assesses before this hook exists, so look at every latest status once.
+        try:
+            for member in store.crew():
+                latest = pipeline.status(member.astronaut_id)
+                if latest is not None:
+                    auto_send(latest)
+        except Exception:
+            log.exception("auto-send startup check failed")
+
     @app.get("/api/outbox")
     def outbox(astronaut_id: str | None = None) -> list[OutboxItem]:
         """Everything sent to Earth, newest first, with ``status`` and ``seconds_left`` now."""
@@ -432,4 +493,5 @@ def create_app_from_settings(config_path: str | None = None) -> FastAPI:
 
     settings = load_settings(config_path)
     return create_app(Pipeline.from_settings(settings), mission_name=settings.mission_name,
-                      comms_delay_minutes=settings.comms_delay_minutes)
+                      comms_delay_minutes=settings.comms_delay_minutes,
+                      auto_send_level=settings.comms_auto_send_level)
