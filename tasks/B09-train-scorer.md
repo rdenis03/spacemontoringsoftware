@@ -1,6 +1,6 @@
 # B09 · Train the scorer on simulated missions
 
-**Lane:** AI · **Needs:** B04 (B03 is enough for a first run), B07, B08 · **Branch:** `be/b09-train-scorer` · **Size:** M
+**Lane:** AI · **Needs:** B04 (B03 is enough for a first run), B07, B08 · **Branch:** `data/b09-train-scorer` · **Size:** M
 
 ## Goal
 

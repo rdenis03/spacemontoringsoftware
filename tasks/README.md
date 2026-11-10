@@ -6,10 +6,11 @@ for one AI agent (or one person): one branch, one pull request, one test file.
 - **Full module specs:** [SPEC.md](../SPEC.md), Part 3. Tasks point to it
   instead of repeating it.
 - **Design reasons:** [ARCHITECTURE.md](../ARCHITECTURE.md).
-- **Frontend:** has its own brief (the *ORBIT Frontend Architecture* doc).
-  The frontend owns only `frontend/`. The backend now also owns
-  `orbit/api/app.py` and the backend parts of M10, M13 and M14, which
-  WORKPLAN.md gave to person B.
+- **Who does what:** [WORKPLAN.md](../WORKPLAN.md). Person A does the whole
+  backend (every task here, including the API). Person B does only
+  `frontend/`, from its own brief (the *ORBIT Frontend Architecture* doc).
+- **Branches:** one per task, with A's prefix: `data/b01-scenario-labels`,
+  `data/b02-simulator-healthy`, ... Each task file names its branch.
 
 ## How to run a task with an agent
 
@@ -18,7 +19,7 @@ for one AI agent (or one person): one branch, one pull request, one test file.
    ```bash
    git checkout main
    git pull
-   git checkout -b be/b02-simulator-healthy
+   git checkout -b data/b02-simulator-healthy
    ```
 
 2. Start Claude Code in the repo folder and paste (change the task ID):

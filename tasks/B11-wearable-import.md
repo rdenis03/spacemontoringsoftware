@@ -1,6 +1,6 @@
 # B11 · Wearable CSV import
 
-**Lane:** Data (M3) · **Needs:** none · **Branch:** `be/b11-wearable-import` · **Size:** M
+**Lane:** Data (M3) · **Needs:** none · **Branch:** `data/b11-wearable-import` · **Size:** M
 
 ## Goal
 

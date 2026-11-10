@@ -1,6 +1,6 @@
 # B15 · Shared status for the crew view
 
-**Lane:** API (M14, backend part) · **Needs:** B14 (order only) · **Branch:** `be/b15-api-shared-status` · **Size:** S
+**Lane:** API (M14, backend part) · **Needs:** B14 (order only) · **Branch:** `data/b15-api-shared-status` · **Size:** S
 
 ## Goal
 

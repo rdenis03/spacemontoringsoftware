@@ -1,6 +1,6 @@
 # B13 · Past-day endpoint for replay
 
-**Lane:** API · **Needs:** none · **Branch:** `be/b13-api-past-day` · **Size:** S
+**Lane:** API · **Needs:** none · **Branch:** `data/b13-api-past-day` · **Size:** S
 
 ## Goal
 

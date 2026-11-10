@@ -1,6 +1,6 @@
 # B18 · Auto-send on orange or red
 
-**Lane:** API · **Needs:** B17 · **Branch:** `be/b18-auto-send` · **Size:** S
+**Lane:** API · **Needs:** B17 · **Branch:** `data/b18-auto-send` · **Size:** S
 
 ## Goal
 

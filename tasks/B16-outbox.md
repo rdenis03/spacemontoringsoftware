@@ -1,6 +1,6 @@
 # B16 · Outbox with comms delay
 
-**Lane:** API (M13, part 2) · **Needs:** B15 (order only) · **Branch:** `be/b16-outbox` · **Size:** M
+**Lane:** API (M13, part 2) · **Needs:** B15 (order only) · **Branch:** `data/b16-outbox` · **Size:** M
 
 ## Goal
 

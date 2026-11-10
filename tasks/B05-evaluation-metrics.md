@@ -1,6 +1,6 @@
 # B05 · Evaluation metrics
 
-**Lane:** Evaluation (M9) · **Needs:** B01 · **Branch:** `be/b05-eval-metrics` · **Size:** S
+**Lane:** Evaluation (M9) · **Needs:** B01 · **Branch:** `data/b05-eval-metrics` · **Size:** S
 
 ## Goal
 

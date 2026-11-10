@@ -1,6 +1,6 @@
 # B02 · Simulator v1: healthy crew
 
-**Lane:** Simulator (M2) · **Needs:** B01 · **Branch:** `be/b02-simulator-healthy` · **Size:** M
+**Lane:** Simulator (M2) · **Needs:** B01 · **Branch:** `data/b02-simulator-healthy` · **Size:** M
 
 ## Goal
 
@@ -48,7 +48,8 @@ physiology right first makes illness easy to add and easy to test.
 7. `labels()` returns `[]` for now (B03 fills it).
 8. `experiments/sim180.toml`: a copy of `orbit.toml` with the `files` source
    replaced by `[[sources]] use = "simulator"`, `days = 180`,
-   `labels_path = "data/sim/labels.jsonl"`, and `database = ":memory:"`.
+   `labels_path = "data/sim/labels.jsonl"`, and `[storage] database = "data/sim180.db"`
+   (its own database, so the normal `data/orbit.db` stays clean; see WORKPLAN.md).
    Never use the `files` source and the simulator in one config.
 
 ## Tests (`tests/test_simulator.py`)

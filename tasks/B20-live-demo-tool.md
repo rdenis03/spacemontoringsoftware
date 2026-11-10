@@ -1,6 +1,6 @@
 # B20 · Live body demo tool
 
-**Lane:** Demo · **Needs:** none (uses B11 if it exists) · **Branch:** `be/b20-live-demo-tool` · **Size:** S
+**Lane:** Demo · **Needs:** none (uses B11 if it exists) · **Branch:** `data/b20-live-demo-tool` · **Size:** S
 
 ## Goal
 

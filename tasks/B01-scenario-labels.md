@@ -1,6 +1,6 @@
 # B01 · Scenario labels schema
 
-**Lane:** Simulator (part of M2) · **Needs:** none · **Branch:** `be/b01-scenario-labels` · **Size:** S
+**Lane:** Simulator (part of M2) · **Needs:** none · **Branch:** `data/b01-scenario-labels` · **Size:** S
 
 ## Goal
 

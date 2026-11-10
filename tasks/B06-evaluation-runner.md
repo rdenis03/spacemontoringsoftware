@@ -1,6 +1,6 @@
 # B06 · Evaluation runner and CLI
 
-**Lane:** Evaluation (M9) · **Needs:** B04, B05 · **Branch:** `be/b06-eval-runner` · **Size:** M
+**Lane:** Evaluation (M9) · **Needs:** B04, B05 · **Branch:** `data/b06-eval-runner` · **Size:** M
 
 ## Goal
 

@@ -1,6 +1,6 @@
 # B03 · Simulator v2: illness episodes and labels
 
-**Lane:** Simulator (M2) · **Needs:** B02 · **Branch:** `be/b03-simulator-illness` · **Size:** M
+**Lane:** Simulator (M2) · **Needs:** B02 · **Branch:** `data/b03-simulator-illness` · **Size:** M
 
 ## Goal
 

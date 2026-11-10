@@ -1,6 +1,6 @@
 # B17 · Plain-language report for Earth
 
-**Lane:** API · **Needs:** B16 · **Branch:** `be/b17-earth-report` · **Size:** S
+**Lane:** API · **Needs:** B16 · **Branch:** `data/b17-earth-report` · **Size:** S
 
 ## Goal
 

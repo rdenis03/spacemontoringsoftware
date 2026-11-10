@@ -1,6 +1,6 @@
 # B08 · Learned scorer module (placeholder weights)
 
-**Lane:** AI (M8) · **Needs:** B07 · **Branch:** `be/b08-learned-scorer` · **Size:** S
+**Lane:** AI (M8) · **Needs:** B07 · **Branch:** `data/b08-learned-scorer` · **Size:** S
 
 ## Goal
 

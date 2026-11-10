@@ -1,6 +1,6 @@
 # B14 · Consent editing endpoint
 
-**Lane:** API (M13, part 1) · **Needs:** B13 (order only) · **Branch:** `be/b14-api-consent` · **Size:** S
+**Lane:** API (M13, part 1) · **Needs:** B13 (order only) · **Branch:** `data/b14-api-consent` · **Size:** S
 
 ## Goal
 

@@ -1,6 +1,6 @@
 # B12 · NASA space weather feed
 
-**Lane:** Data (M5) · **Needs:** none · **Branch:** `be/b12-space-weather` · **Size:** M
+**Lane:** Data (M5) · **Needs:** none · **Branch:** `data/b12-space-weather` · **Size:** M
 
 ## Goal
 

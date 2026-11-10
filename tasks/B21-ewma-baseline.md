@@ -1,6 +1,6 @@
 # B21 · EWMA baseline (stretch)
 
-**Lane:** Analytics (M6) · **Needs:** none (B06 for the comparison) · **Branch:** `be/b21-ewma-baseline` · **Size:** S
+**Lane:** Analytics (M6) · **Needs:** none (B06 for the comparison) · **Branch:** `data/b21-ewma-baseline` · **Size:** S
 
 ## Goal
 

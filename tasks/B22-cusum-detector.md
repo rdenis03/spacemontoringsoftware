@@ -1,6 +1,6 @@
 # B22 · CUSUM detector (stretch)
 
-**Lane:** Analytics (M7) · **Needs:** none (B06 for the comparison) · **Branch:** `be/b22-cusum-detector` · **Size:** S
+**Lane:** Analytics (M7) · **Needs:** none (B06 for the comparison) · **Branch:** `data/b22-cusum-detector` · **Size:** S
 
 ## Goal
 

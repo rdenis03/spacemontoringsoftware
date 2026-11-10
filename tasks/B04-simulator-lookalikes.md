@@ -1,6 +1,6 @@
 # B04 · Simulator v3: look-alikes and sensor faults
 
-**Lane:** Simulator (M2) · **Needs:** B03 · **Branch:** `be/b04-simulator-lookalikes` · **Size:** M
+**Lane:** Simulator (M2) · **Needs:** B03 · **Branch:** `data/b04-simulator-lookalikes` · **Size:** M
 
 ## Goal
 

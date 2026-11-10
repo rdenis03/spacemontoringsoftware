@@ -1,6 +1,6 @@
 # B10 · Compare learned vs starter, then switch
 
-**Lane:** AI · **Needs:** B06, B08, B09 · **Branch:** `be/b10-compare-switch` · **Size:** S
+**Lane:** AI · **Needs:** B06, B08, B09 · **Branch:** `data/b10-compare-switch` · **Size:** S
 
 ## Goal
 

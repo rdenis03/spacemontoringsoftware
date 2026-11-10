@@ -1,6 +1,6 @@
 # B07 · Feature extraction for the AI scorer
 
-**Lane:** AI · **Needs:** none · **Branch:** `be/b07-scorer-features` · **Size:** S
+**Lane:** AI · **Needs:** none · **Branch:** `data/b07-scorer-features` · **Size:** S
 
 ## Goal
 

@@ -1,6 +1,6 @@
 # B19 · Action cards v2
 
-**Lane:** Crew guidance (M10) · **Needs:** none · **Branch:** `be/b19-action-cards` · **Size:** S
+**Lane:** Crew guidance (M10) · **Needs:** none · **Branch:** `data/b19-action-cards` · **Size:** S
 
 ## Goal
 
