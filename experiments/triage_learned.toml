@@ -1,7 +1,7 @@
 # ORBIT experiment: the learned triage modules (M15, task B24).
 # A copy of orbit.toml with [triage.extractor] use = "text_linear" and
 # [triage.reasoner] use = "bayes". orbit.toml keeps the starters (lexicon, rules)
-# until the switch rules in tasks/B24-triage-ml.md pass and the team agrees.
+# until the switch rules in SPEC.md (M15) pass and the team agrees.
 # Compare:  python -m orbit.evaluation.triage --config orbit.toml \
 #             --config experiments/triage_learned.toml --seeds 101-105 --days 180 --crew 4 \
 #             --out reports/triage_eval.json

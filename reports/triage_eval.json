@@ -27,7 +27,7 @@
         "provisional": true,
         "sentences": 20,
         "sources": [
-          "stub-claude"
+          "stub"
         ],
         "f1": {
           "symptom_fatigue": 1.0,
@@ -212,7 +212,7 @@
         "provisional": true,
         "sentences": 20,
         "sources": [
-          "stub-claude"
+          "stub"
         ],
         "f1": {
           "symptom_fatigue": 1.0,

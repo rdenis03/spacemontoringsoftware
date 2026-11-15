@@ -67,10 +67,10 @@ def test_the_evaluation_is_deterministic(report):
 
 
 def test_extractor_metrics_on_a_tiny_file(tmp_path):
-    lines = [{"text": "Pretty tired, no fever.", "source": "stub-claude",
+    lines = [{"text": "Pretty tired, no fever.", "source": "stub",
               "findings": {"symptom_fatigue": {"severity": 2, "negated": False},
                            "symptom_fever_chills": {"severity": 0, "negated": True}}},
-             {"text": "All good today.", "source": "stub-claude", "findings": {}}]
+             {"text": "All good today.", "source": "stub", "findings": {}}]
     path = tmp_path / "h.jsonl"
     path.write_text("\n".join(json.dumps(line) for line in lines), encoding="utf-8")
     m = ev.extractor_metrics(create("extractor", "lexicon"), path)

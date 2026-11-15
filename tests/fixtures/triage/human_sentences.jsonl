@@ -1,20 +1,20 @@
-{"text": "Woke up with a scratchy throat and I'm kind of achy all over.", "findings": {"symptom_sore_throat": {"severity": null, "negated": false}, "symptom_muscle_aches": {"severity": 1, "negated": false}}, "source": "stub-claude"}
-{"text": "Burning stripe across my left ribs, no fever though.", "findings": {"symptom_rash_tingling": {"severity": null, "negated": false}, "symptom_fever_chills": {"severity": 0, "negated": true}}, "source": "stub-claude"}
-{"text": "So exhausted I can hardly think. Head is pounding too.", "findings": {"symptom_fatigue": {"severity": 2, "negated": false}, "symptom_headache": {"severity": null, "negated": false}}, "source": "stub-claude"}
-{"text": "No headache today, just tired.", "findings": {"symptom_headache": {"severity": 0, "negated": true}, "symptom_fatigue": {"severity": null, "negated": false}}, "source": "stub-claude"}
-{"text": "I've got a cold sore on my lip and I feel a little run down.", "findings": {"symptom_mouth_sores": {"severity": null, "negated": false}, "symptom_fatigue": {"severity": 1, "negated": false}}, "source": "stub-claude"}
-{"text": "Chills last night and my throat hurts when I swallow.", "findings": {"symptom_fever_chills": {"severity": null, "negated": false}, "symptom_sore_throat": {"severity": null, "negated": false}}, "source": "stub-claude"}
-{"text": "Legs are really sore after the EVA, otherwise fine.", "findings": {"symptom_muscle_aches": {"severity": 2, "negated": false}}, "source": "stub-claude"}
-{"text": "Not feverish, not tired, all good.", "findings": {"symptom_fever_chills": {"severity": 0, "negated": true}, "symptom_fatigue": {"severity": 0, "negated": true}}, "source": "stub-claude"}
-{"text": "There's a tingly patch on my back since yesterday.", "findings": {"symptom_rash_tingling": {"severity": null, "negated": false}}, "source": "stub-claude"}
-{"text": "Swollen glands in my neck and a mild sore throat.", "findings": {"symptom_swollen_glands": {"severity": null, "negated": false}, "symptom_sore_throat": {"severity": 1, "negated": false}}, "source": "stub-claude"}
-{"text": "Terrible headache since this morning, a bit nauseous.", "findings": {"symptom_headache": {"severity": 3, "negated": false}}, "source": "stub-claude"}
-{"text": "I don't have any rash but my skin feels prickly on one side.", "findings": {"symptom_rash_tingling": {"severity": null, "negated": false}}, "source": "stub-claude"}
-{"text": "Feeling great, slept eight hours.", "findings": {}, "source": "stub-claude"}
-{"text": "Pretty bad muscle aches and I'm shivering.", "findings": {"symptom_muscle_aches": {"severity": 3, "negated": false}, "symptom_fever_chills": {"severity": null, "negated": false}}, "source": "stub-claude"}
-{"text": "A couple of mouth ulcers, no sore throat.", "findings": {"symptom_mouth_sores": {"severity": null, "negated": false}, "symptom_sore_throat": {"severity": 0, "negated": true}}, "source": "stub-claude"}
-{"text": "Drained after the long shift and my head aches a little.", "findings": {"symptom_fatigue": {"severity": null, "negated": false}, "symptom_headache": {"severity": 1, "negated": false}}, "source": "stub-claude"}
-{"text": "Without any fever, but my whole body aches.", "findings": {"symptom_fever_chills": {"severity": 0, "negated": true}, "symptom_muscle_aches": {"severity": null, "negated": false}}, "source": "stub-claude"}
-{"text": "Mood is fine, nothing hurts.", "findings": {}, "source": "stub-claude"}
-{"text": "Feverish and tired, with tender glands under my jaw.", "findings": {"symptom_fever_chills": {"severity": null, "negated": false}, "symptom_fatigue": {"severity": null, "negated": false}, "symptom_swollen_glands": {"severity": null, "negated": false}}, "source": "stub-claude"}
-{"text": "My throat isn't sore anymore, just a stuffy nose.", "findings": {"symptom_sore_throat": {"severity": 0, "negated": true}}, "source": "stub-claude"}
+{"text": "Woke up with a scratchy throat and I'm kind of achy all over.", "findings": {"symptom_sore_throat": {"severity": null, "negated": false}, "symptom_muscle_aches": {"severity": 1, "negated": false}}, "source": "stub"}
+{"text": "Burning stripe across my left ribs, no fever though.", "findings": {"symptom_rash_tingling": {"severity": null, "negated": false}, "symptom_fever_chills": {"severity": 0, "negated": true}}, "source": "stub"}
+{"text": "So exhausted I can hardly think. Head is pounding too.", "findings": {"symptom_fatigue": {"severity": 2, "negated": false}, "symptom_headache": {"severity": null, "negated": false}}, "source": "stub"}
+{"text": "No headache today, just tired.", "findings": {"symptom_headache": {"severity": 0, "negated": true}, "symptom_fatigue": {"severity": null, "negated": false}}, "source": "stub"}
+{"text": "I've got a cold sore on my lip and I feel a little run down.", "findings": {"symptom_mouth_sores": {"severity": null, "negated": false}, "symptom_fatigue": {"severity": 1, "negated": false}}, "source": "stub"}
+{"text": "Chills last night and my throat hurts when I swallow.", "findings": {"symptom_fever_chills": {"severity": null, "negated": false}, "symptom_sore_throat": {"severity": null, "negated": false}}, "source": "stub"}
+{"text": "Legs are really sore after the EVA, otherwise fine.", "findings": {"symptom_muscle_aches": {"severity": 2, "negated": false}}, "source": "stub"}
+{"text": "Not feverish, not tired, all good.", "findings": {"symptom_fever_chills": {"severity": 0, "negated": true}, "symptom_fatigue": {"severity": 0, "negated": true}}, "source": "stub"}
+{"text": "There's a tingly patch on my back since yesterday.", "findings": {"symptom_rash_tingling": {"severity": null, "negated": false}}, "source": "stub"}
+{"text": "Swollen glands in my neck and a mild sore throat.", "findings": {"symptom_swollen_glands": {"severity": null, "negated": false}, "symptom_sore_throat": {"severity": 1, "negated": false}}, "source": "stub"}
+{"text": "Terrible headache since this morning, a bit nauseous.", "findings": {"symptom_headache": {"severity": 3, "negated": false}}, "source": "stub"}
+{"text": "I don't have any rash but my skin feels prickly on one side.", "findings": {"symptom_rash_tingling": {"severity": null, "negated": false}}, "source": "stub"}
+{"text": "Feeling great, slept eight hours.", "findings": {}, "source": "stub"}
+{"text": "Pretty bad muscle aches and I'm shivering.", "findings": {"symptom_muscle_aches": {"severity": 3, "negated": false}, "symptom_fever_chills": {"severity": null, "negated": false}}, "source": "stub"}
+{"text": "A couple of mouth ulcers, no sore throat.", "findings": {"symptom_mouth_sores": {"severity": null, "negated": false}, "symptom_sore_throat": {"severity": 0, "negated": true}}, "source": "stub"}
+{"text": "Drained after the long shift and my head aches a little.", "findings": {"symptom_fatigue": {"severity": null, "negated": false}, "symptom_headache": {"severity": 1, "negated": false}}, "source": "stub"}
+{"text": "Without any fever, but my whole body aches.", "findings": {"symptom_fever_chills": {"severity": 0, "negated": true}, "symptom_muscle_aches": {"severity": null, "negated": false}}, "source": "stub"}
+{"text": "Mood is fine, nothing hurts.", "findings": {}, "source": "stub"}
+{"text": "Feverish and tired, with tender glands under my jaw.", "findings": {"symptom_fever_chills": {"severity": null, "negated": false}, "symptom_fatigue": {"severity": null, "negated": false}, "symptom_swollen_glands": {"severity": null, "negated": false}}, "source": "stub"}
+{"text": "My throat isn't sore anymore, just a stuffy nose.", "findings": {"symptom_sore_throat": {"severity": 0, "negated": true}}, "source": "stub"}
