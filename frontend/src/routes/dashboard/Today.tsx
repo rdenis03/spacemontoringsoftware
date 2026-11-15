@@ -1,6 +1,7 @@
 /**
- * Today (design variant C, "Instrument"): a status column with a vertical
- * score meter, the contributors as framed cards, and the action cards.
+ * Today: one status card (level, score, a score meter on the level bands,
+ * change vs yesterday), the contributors as a grouped list, and the action
+ * cards with their steps as a checklist.
  */
 import { useState } from "react";
 import { api } from "../../api/client";
@@ -47,7 +48,7 @@ export default function Today({
 
   return (
     <div className="today">
-      <StatusColumn result={result} previous={previous} />
+      <StatusCard result={result} previous={previous} />
       <Contributors contributors={assessment.contributors ?? []} anomalies={result.anomalies ?? []} score={assessment.score} />
       <div className="today__actions">
         <ActionsPanel key={`${result.astronaut_id}-${result.as_of}`} cards={result.actions ?? []} />
@@ -64,62 +65,77 @@ function previousAssessment(all: RiskAssessment[] | undefined, before: string): 
     .sort((a, b) => new Date(b.assessed_at).getTime() - new Date(a.assessed_at).getTime())[0];
 }
 
-/* ---- status column ------------------------------------------------------------------ */
+/* ---- status --------------------------------------------------------------------------- */
 
-function StatusColumn({ result, previous }: { result: DayResult; previous?: RiskAssessment }) {
+function StatusCard({ result, previous }: { result: DayResult; previous?: RiskAssessment }) {
   const { registry } = useRegistry();
   const assessment = result.assessment!;
   const level = assessment.level ?? "green";
   const copy = levelCopy(level);
   const bands = levelBands(registry.alert_levels);
   const change = previous ? signedNumber(Math.round(assessment.score) - Math.round(previous.score)).replace(/^\+0$/, "±0") : null;
+  const position = Math.min(100, Math.max(0, assessment.score));
 
   return (
     <Frame className="status" aria-labelledby="status-heading">
-      <span className="kicker">Today's status</span>
-      <div className="status__body">
-        <div className="vmeter" aria-hidden="true">
-          {bands.map((b) => (
-            <span
-              key={b.level}
-              className="vmeter__band"
-              style={{ flexGrow: b.to - b.from, background: b.level === level ? levelColor(b.level) : undefined }}
-            />
-          ))}
-          <span className="vmeter__marker" style={{ bottom: `${Math.min(100, Math.max(0, assessment.score))}%` }} />
-        </div>
-        <div className="status__text">
-          <div className="status__level" key={level}>
-            <LevelIcon level={level} size={34} />
+      <p className="kicker">Today's status</p>
+      <div className="status__main">
+        <div className="status__level" key={level}>
+          <LevelIcon level={level} size={40} />
+          <div>
             <h2 id="status-heading" className="status__word" style={{ color: levelInk(level) }}>
               {copy.word}
             </h2>
-            <span className="status__meaning">{copy.meaning}</span>
+            <p className="status__meaning">{copy.meaning}</p>
           </div>
-          <div className="status__score">
-            <span className="figure status__figure">{formatNumber(assessment.score, 0)}</span>
-            <span className="secondary">
-              of 100{change ? ` · ${change} vs yesterday` : ""}
-            </span>
-          </div>
+        </div>
+        <div className="status__score">
+          <span className="figure status__figure">{formatNumber(assessment.score, 0)}</span>
+          <span className="secondary">
+            of 100{change ? ` · ${change} vs yesterday` : ""}
+          </span>
         </div>
       </div>
-      <dl className="status__facts">
-        <div>
-          <dt>Mission day</dt>
-          <dd className="data">{result.mission_day}</dd>
+
+      <div className="meter" aria-hidden="true">
+        <div className="meter__track">
+          {bands.map((b) => (
+            <span
+              key={b.level}
+              className="meter__band"
+              style={{ flexGrow: b.to - b.from, background: b.level === level ? levelColor(b.level) : undefined }}
+            />
+          ))}
         </div>
-        <div>
-          <dt>Assessed</dt>
-          <dd className="data">{formatClock(assessment.assessed_at)}</dd>
+        <span className="meter__marker" style={{ left: `${position}%` }} />
+        <div className="meter__labels">
+          {bands.map((b) => (
+            <span key={b.level} style={{ flexGrow: b.to - b.from }}>
+              {b.from}
+            </span>
+          ))}
         </div>
-        {assessment.model_version && (
+      </div>
+
+      <details className="disclosure disclosure--quiet">
+        <summary>Show details</summary>
+        <dl className="status__facts">
           <div>
-            <dt>Model</dt>
-            <dd>{assessment.model_version}</dd>
+            <dt>Mission day</dt>
+            <dd className="data">{result.mission_day}</dd>
           </div>
-        )}
-      </dl>
+          <div>
+            <dt>Assessed</dt>
+            <dd className="data">{formatClock(assessment.assessed_at)}</dd>
+          </div>
+          {assessment.model_version && (
+            <div>
+              <dt>Model</dt>
+              <dd>{assessment.model_version}</dd>
+            </div>
+          )}
+        </dl>
+      </details>
     </Frame>
   );
 }
@@ -142,20 +158,13 @@ function Contributors({
 
   return (
     <section className="contributors" aria-labelledby="why-heading">
-      <div className="section-head">
-        <h2 id="why-heading" className="section-label">
-          Contributors
-        </h2>
-        {contributors.length > 0 && (
-          <span className="secondary data">
-            {contributors.length} reason{contributors.length === 1 ? "" : "s"} · {formatNumber(total, 0)} pts
-          </span>
-        )}
-      </div>
+      <h2 id="why-heading" className="section-label">
+        Why
+      </h2>
       {contributors.length === 0 ? (
-        <p className="secondary">Nothing raised your score today.</p>
+        <p className="card empty-card secondary">Nothing raised your score today.</p>
       ) : (
-        <ul className="contributors__grid">
+        <ul className="group">
           {contributors.map((c, i) => {
             const s = spec(c.signal);
             const anomaly = c.signal ? bySignal.get(c.signal) : undefined;
@@ -172,27 +181,29 @@ function Contributors({
                       ? "Stress event"
                       : "";
             return (
-              <Frame as="li" key={`${c.label}-${i}`} className="contrib">
-                <span className="kicker contrib__label">{c.label}</span>
-                <div className="contrib__pts">
-                  <span className="figure">+{formatNumber(c.points, 1)}</span>
-                  <span className="secondary">pts</span>
+              <li key={`${c.label}-${i}`} className="contrib">
+                <div className="contrib__top">
+                  <span className="contrib__label">{c.label}</span>
+                  <span className="contrib__pts data">+{formatNumber(c.points, 1)} pts</span>
                 </div>
-                <div className="contrib__bar" aria-hidden="true">
+                <div className="bar" aria-hidden="true">
                   <span style={{ width: `${(c.points / maxPoints) * 100}%` }} />
                 </div>
-                {anomaly && s && (
-                  <NormalBand value={anomaly.value} center={anomaly.baseline_center} spread={anomaly.baseline_spread} spec={s} />
-                )}
-                {valueLine && <span className="contrib__value data">{valueLine}</span>}
-                <div className="contrib__without">
-                  <span>
-                    Without it: <span className="data">{formatNumber(without, 0)}</span>
-                  </span>
-                  <LevelTag level={withoutLevel} />
-                  <span className="visually-hidden">(score now {formatNumber(score, 0)})</span>
-                </div>
-              </Frame>
+                <details className="disclosure disclosure--quiet contrib__details">
+                  <summary>Show details</summary>
+                  {anomaly && s && (
+                    <NormalBand value={anomaly.value} center={anomaly.baseline_center} spread={anomaly.baseline_spread} spec={s} />
+                  )}
+                  {valueLine && <span className="caption data">{valueLine}</span>}
+                  <div className="contrib__without caption">
+                    <span>
+                      Without it: <span className="data">{formatNumber(without, 0)}</span>
+                    </span>
+                    <LevelTag level={withoutLevel} />
+                    <span className="visually-hidden">(score now {formatNumber(score, 0)})</span>
+                  </div>
+                </details>
+              </li>
             );
           })}
         </ul>
@@ -228,28 +239,30 @@ export function ActionsPanel({ cards, heading = "What to do now" }: { cards: rea
           </span>
         )}
       </div>
-      <div className="actions__progress" aria-hidden="true">
-        <span style={{ width: `${totalSteps ? (done.size / totalSteps) * 100 : 0}%` }} />
-      </div>
+      {totalSteps > 0 && (
+        <div className="bar bar--accent" aria-hidden="true">
+          <span style={{ width: `${(done.size / totalSteps) * 100}%` }} />
+        </div>
+      )}
       {tell.length > 0 && (
-        <p className="actions__tell">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
+        <p className="tell">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="8" r="3.5" />
+            <path d="M5 20a7 7 0 0 1 14 0" />
           </svg>
           <span>
             Tell the <strong>{tell.map((t) => humanize(t).toLowerCase()).join(" and the ")}</strong> today.
           </span>
         </p>
       )}
-      {cards.length === 0 && <p className="secondary">No action cards for this result.</p>}
+      {cards.length === 0 && <p className="card empty-card secondary">No action cards for this result.</p>}
       {cards.map((card) => (
         <Frame as="article" key={card.card_id} className="action-card">
           <header className="action-card__head">
-            <h3>{card.title}</h3>
+            <h3 className="headline">{card.title}</h3>
             <LevelTag level={card.level} />
           </header>
-          <ol className="action-card__steps">
+          <ol className="steps">
             {(card.steps ?? []).map((step, i) => {
               const key = `${card.card_id}:${i}`;
               return (
@@ -262,10 +275,15 @@ export function ActionsPanel({ cards, heading = "What to do now" }: { cards: rea
               );
             })}
           </ol>
-          <p className="action-card__why">{card.rationale}</p>
-          <p className="action-card__who">
+          <p className="caption">
             {(card.escalate_to ?? "self") === "self" ? "Handle this yourself" : `Escalates to ${humanize(card.escalate_to!).toLowerCase()}`}
           </p>
+          {card.rationale && (
+            <details className="disclosure disclosure--quiet">
+              <summary>Why this</summary>
+              <p className="action-card__why secondary">{card.rationale}</p>
+            </details>
+          )}
         </Frame>
       ))}
     </section>

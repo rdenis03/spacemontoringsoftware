@@ -30,12 +30,12 @@ export function levelRank(level: string, order: string[]): number {
 
 /** Mark colour for a level (icon fills, chart points, bands). Level colours mean state and nothing else. */
 export function levelColor(level: string): string {
-  return `var(--level-${level}, var(--color-neutral-500))`;
+  return `var(--level-${level}, var(--text-3))`;
 }
 
 /** Text colour for a level (words next to a mark). */
 export function levelInk(level: string): string {
-  return `var(--level-${level}-ink, var(--color-neutral-700))`;
+  return `var(--level-${level}-ink, var(--text-2))`;
 }
 
 /** A level colour mixed into transparency, for zone and band fills. */

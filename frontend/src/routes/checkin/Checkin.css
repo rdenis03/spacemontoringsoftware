@@ -1,166 +1,90 @@
-/* ORBIT Instrument — daily check-in (M11). */
+/* Daily check-in (M11). Earth comms and the chat (M15) reuse the review card and error box.
+   The question rows and segmented options live in components/ScaleQuestion.css. */
 
 .checkin {
   display: grid;
-  gap: 28px;
-}
-
-.checkin__head {
-  display: grid;
-  gap: 6px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--color-divider);
-}
-
-.checkin__lead {
-  font-size: 16px;
-  color: var(--color-neutral-700);
+  gap: var(--space-5);
 }
 
 .checkin__layout {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 34px;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .checkin__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .checkin__questions {
-  flex: 1 1 560px;
   min-width: 0;
   display: grid;
-  gap: 34px;
+  gap: var(--space-5);
 }
 
 .checkin__side {
-  flex: 0 1 340px;
-  min-width: 280px;
-}
-
-/* fieldset in a blueprint frame */
-.checkin__group {
-  margin: 0;
-  padding: 22px 26px 10px;
-  display: grid;
   min-width: 0;
 }
 
-.checkin__group legend {
-  padding: 0 8px;
-  margin-left: -8px;
+/* a fieldset as a grouped card: legend, then one row per question */
+.checkin__group {
+  margin: 0;
+  padding: 0 0 var(--space-1);
+  min-width: 0;
+}
+
+.checkin__legend {
+  float: left; /* puts the legend inside the card, above the rows */
+  width: 100%;
+  padding: var(--space-4) var(--space-4) var(--space-1);
+  font-size: var(--text-title);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.checkin__legend + * {
+  clear: both;
 }
 
 .checkin__optional {
-  font-family: var(--font-body);
-  font-size: 13px;
+  margin-left: var(--space-1);
+  font-size: var(--text-secondary);
   font-weight: 400;
   letter-spacing: 0;
-  text-transform: none;
-  color: var(--color-neutral-700);
-}
-
-/* ---- one question ---- */
-
-.scale {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 20px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--color-divider);
-}
-
-.checkin__group .scale:last-of-type {
-  border-bottom: 0;
-}
-
-.scale__text {
-  display: grid;
-  gap: 1px;
-  min-width: 180px;
-  flex: 1;
-}
-
-.scale__label {
-  font-weight: 500;
-  font-size: 16px;
-}
-
-.scale__desc {
-  font-size: 13px;
-  color: var(--color-neutral-700);
-}
-
-.scale__controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.scale__options {
-  display: flex;
-  flex-wrap: wrap;
-  border: 1px solid var(--color-divider);
-}
-
-.scale__option {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: var(--target);
-  padding: 0 14px;
-  font-size: 14px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.scale__option + .scale__option {
-  border-left: 1px solid var(--color-divider);
-}
-
-.scale__option:hover {
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
-}
-
-.scale__option[data-checked] {
-  font-weight: 600;
-}
-
-/* the real radio stays for keyboards and screen readers */
-.scale__option input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  margin: 0;
-  cursor: pointer;
-}
-
-.scale__option:has(input:focus-visible) {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
+  color: var(--text-2);
 }
 
 /* ---- note ---- */
 
+.scale + .checkin__note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--space-4);
+  right: 0;
+  border-top: 1px solid var(--separator);
+}
+
 .checkin__note {
-  margin: 14px 0 14px;
+  position: relative;
+  padding: var(--space-3) var(--space-4) var(--space-3);
 }
 
 .checkin__count {
   justify-self: end;
-  font-size: 12px;
-  color: var(--color-neutral-600);
+  font-size: var(--text-caption);
+  color: var(--text-2);
 }
 
-/* ---- review & save (sticky) ---- */
+/* ---- review and save (sticky card) ---- */
 
 .review {
-  flex: 0 1 340px;
-  min-width: 280px;
-  padding: 22px 24px;
+  padding: var(--space-5);
   display: grid;
-  gap: 18px;
+  gap: var(--space-4);
   position: sticky;
   top: 84px;
 }
@@ -173,154 +97,153 @@
 
 .review__count {
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .review__figure {
-  font-size: 32px;
-  line-height: 1;
-}
-
-.review__count .secondary {
-  font-size: 14px;
+  font-size: 44px;
 }
 
 .review__when {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding-top: 14px;
-  border-top: 1px solid var(--color-divider);
+  justify-items: start;
+  gap: var(--space-2);
+}
+
+/* in the side card the panel opens from the pill's left edge */
+.review__when .mtime__panel {
+  left: 0;
+  transform: none;
+  animation: none;
 }
 
 .review__stamp {
-  font-size: 12px;
-  color: var(--color-neutral-700);
+  font-size: var(--text-caption);
+  color: var(--text-2);
   text-wrap: pretty;
 }
 
 .review__stamp .data {
-  color: var(--color-text);
+  color: var(--text);
 }
 
 .review__save {
-  padding: 14px 18px;
-  font-size: 17px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  width: 100%;
+  min-height: 50px;
+  border-radius: 12px;
 }
 
+/* failure: answers stay, the messages and a retry show here */
 .checkin__error {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
   justify-items: start;
-  padding: 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--level-red) 50%, transparent);
-  background: color-mix(in srgb, var(--level-red) 10%, transparent);
-  font-size: 13px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--card-2);
+  box-shadow: inset 3px 0 0 var(--level-red);
+  font-size: var(--text-secondary);
 }
 
 .checkin__error-title {
   font-weight: 600;
+  color: var(--level-red-ink);
 }
 
 .checkin__error ul {
   margin: 0;
-  padding-left: 18px;
+  padding-left: var(--space-5);
+}
+
+.checkin__error .btn {
+  margin-left: calc(-1 * var(--space-2));
 }
 
 /* ---- result ---- */
 
 .checkin__result {
   display: grid;
-  gap: 28px;
+  gap: var(--space-5);
 }
 
 .saved {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 20px;
-  padding: 14px 18px;
-  background: var(--color-accent-100);
-  color: var(--color-accent-900);
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--accent-tint);
+}
+
+.saved > svg {
+  flex-shrink: 0;
+  color: var(--accent);
 }
 
 .saved__text {
-  font-size: 15px;
+  font-size: var(--text-secondary);
   font-weight: 500;
 }
 
 .saved__actions {
   margin-left: auto;
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .after {
-  padding: 26px 28px;
+  padding: var(--space-5);
   display: flex;
   flex-wrap: wrap;
-  gap: 24px 40px;
+  gap: var(--space-5) var(--space-6);
   align-items: center;
+  justify-content: space-between;
 }
 
 .after__level {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: var(--space-4);
 }
 
 .after__words {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .after__word {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 48px;
-  line-height: 0.9;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  font-size: var(--text-large-title);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 .after__meaning {
-  font-size: 18px;
-  font-weight: 500;
+  font-size: var(--text-body);
+  color: var(--text-2);
 }
 
 .after__score {
   display: grid;
   gap: 2px;
-  padding-left: 28px;
-  border-left: 1px solid var(--color-divider);
+  text-align: right;
 }
 
 .after__figure {
-  font-size: 40px;
-  line-height: 0.9;
+  font-size: 44px;
 }
 
 .top-reasons {
   display: grid;
-  gap: 12px;
-}
-
-.top-reasons__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--color-text);
+  gap: var(--space-3);
 }
 
 .top-reasons__list li {
-  display: grid;
-  grid-template-columns: 28px 1fr auto;
-  gap: 10px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--color-divider);
-  font-size: 15px;
+  padding: var(--space-3) var(--space-4);
+  border-top: 0;
+  font-size: var(--text-body);
 }
 
 .top-reasons__label {

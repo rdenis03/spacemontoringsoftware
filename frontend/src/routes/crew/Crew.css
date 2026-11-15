@@ -1,8 +1,8 @@
-/* ORBIT Instrument — crew view (M14 grid). */
+/* Crew and medical officer view (M14). */
 
 .crew {
   display: grid;
-  gap: 30px;
+  gap: var(--space-5);
 }
 
 .crew__head {
@@ -10,31 +10,26 @@
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--color-divider);
+  gap: var(--space-4) var(--space-5);
 }
 
-.crew__title {
-  display: grid;
-  gap: 6px;
-}
-
+/* count per level, in one card */
 .tally {
   margin: 0;
   display: flex;
-  border: 1px solid var(--color-divider);
+  padding: var(--space-2) 0;
 }
 
 .tally > div {
   display: grid;
+  justify-items: start;
   gap: 2px;
-  padding: 10px 18px;
-  min-width: 92px;
+  padding: var(--space-1) var(--space-4);
+  min-width: 84px;
 }
 
 .tally > div + div {
-  border-left: 1px solid var(--color-divider);
+  border-left: 1px solid var(--separator);
 }
 
 .tally dd {
@@ -42,8 +37,7 @@
 }
 
 .tally__n {
-  font-size: 32px;
-  line-height: 1;
+  font-size: 28px;
 }
 
 .crew__grid {
@@ -51,34 +45,27 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
 }
 
 .crew-card {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 20px;
+  gap: var(--space-3);
+  padding: var(--space-4);
 }
 
 .crew-card__head {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--space-3);
 }
 
 .crew-card__initial {
-  width: 46px;
-  height: 46px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--color-divider);
-  font-family: var(--font-heading);
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--color-accent-700);
+  width: 44px;
+  height: 44px;
+  font-size: 19px;
 }
 
 .crew-card__who {
@@ -87,82 +74,71 @@
 }
 
 .crew-card__name {
-  font-family: var(--font-heading);
-  font-size: 22px;
+  font-size: var(--text-headline);
   font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0.01em;
-}
-
-.crew-card__who .secondary {
-  font-size: 12px;
 }
 
 .crew-card__status {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-text);
+  gap: var(--space-3);
 }
 
 .crew-card__level {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2);
 }
 
 .crew-card__word {
-  font-family: var(--font-heading);
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--text-title);
+  font-weight: 700;
+  letter-spacing: -0.015em;
 }
 
 .crew-card__score {
-  font-size: 30px;
-  line-height: 0.9;
+  font-size: 32px;
 }
 
 .crew-card__score .secondary {
-  font-size: 13px;
   font-weight: 400;
+  letter-spacing: 0;
 }
 
 .crew-card__chart {
   width: 100%;
   height: auto;
   display: block;
+  border-radius: var(--radius-control);
 }
 
 .crew-card__axis {
-  display: flex;
-  justify-content: space-between;
-  margin-top: -8px;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-neutral-600);
+  margin-top: calc(-1 * var(--space-2));
+  color: var(--text-2);
 }
 
+.crew-card__top {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+/* last check-in and escalation, behind "Show details" */
 .crew-card__facts {
   margin: 0;
-  display: grid;
-  gap: 6px;
-  font-size: 13px;
+  font-size: var(--text-secondary);
 }
 
 .crew-card__facts > div {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
 }
 
 .crew-card__facts dt {
-  color: var(--color-neutral-700);
+  color: var(--text-2);
   flex-shrink: 0;
 }
 
@@ -172,104 +148,94 @@
   text-align: right;
 }
 
-.crew-card__open {
-  justify-content: space-between;
-  padding: 10px 14px;
-  margin-top: auto;
-}
-
 .crew-card__actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: auto;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: auto calc(-1 * var(--space-2)) calc(-1 * var(--space-2));
 }
 
-.crew-card__actions .crew-card__open {
-  flex: 1;
-  margin-top: 0;
+.crew-card__open svg {
+  transition: transform var(--fast) var(--ease);
 }
 
-/* ---- shared status detail (M14) ---- */
+/* ---- shared status detail ---- */
 
 .crew-detail {
-  padding: 24px 26px;
+  padding: var(--space-5);
   display: grid;
-  gap: 18px;
+  gap: var(--space-4);
   scroll-margin-top: 84px;
 }
 
-.crew-detail__title {
-  font-size: 26px;
-  line-height: 1.1;
+.crew-detail .section-head {
+  align-items: flex-start;
 }
 
 .crew-detail__body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 26px 40px;
+  gap: var(--space-5);
   align-items: start;
+}
+
+.crew-detail__body section {
+  display: grid;
+  gap: var(--space-2);
 }
 
 .crew-detail__status {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--space-3);
 }
 
 .crew-detail__word {
-  font-family: var(--font-heading);
-  font-size: 32px;
-  font-weight: 600;
-  line-height: 1;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
+/* the lists sit on the card, so they use the darker well */
 .crew-detail__reasons,
 .crew-detail__cards {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
-  border-top: 1px solid var(--color-text);
+  background: var(--card-2);
 }
 
 .crew-detail__reasons li {
   display: grid;
-  grid-template-columns: 26px 1fr auto;
-  gap: 8px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--color-divider);
-  font-size: 14px;
+  grid-template-columns: 22px 1fr auto;
+  gap: var(--space-2);
+  padding: 10px var(--space-4);
+  font-size: var(--text-secondary);
 }
 
 .crew-detail__private {
-  color: var(--color-neutral-600);
+  color: var(--text-2);
   font-style: italic;
 }
 
 .crew-detail__note {
-  margin-top: 10px;
-  font-size: 12px;
-  color: var(--color-neutral-700);
+  font-size: var(--text-caption);
+  color: var(--text-2);
 }
 
 .crew-detail__cards li {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 2px 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--color-divider);
+  gap: 2px var(--space-3);
+  padding: 10px var(--space-4);
 }
 
 .crew-detail__card-title {
+  font-size: var(--text-secondary);
   font-weight: 500;
 }
 
 .crew-detail__esc {
   grid-column: 1 / -1;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-neutral-600);
+  font-size: var(--text-caption);
+  color: var(--text-2);
 }

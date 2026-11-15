@@ -1,8 +1,8 @@
 import type { CSSProperties, ElementType, ReactNode } from "react";
 
 /**
- * Blueprint frame: a hairline box with registration marks at the corners,
- * the signature object of the ORBIT Instrument design.
+ * A rounded card: the one container in the ORBIT design (DESIGN.md › Shape).
+ * `as` picks the element (section, li, fieldset, aside…) so semantics stay.
  */
 export function Frame({
   as: Tag = "section",
@@ -18,20 +18,9 @@ export function Frame({
   [attr: string]: unknown;
 }) {
   return (
-    <Tag className={`blueprint ${className}`.trim()} style={style} {...rest}>
-      <Corners />
+    <Tag className={`card ${className}`.trim()} style={style} {...rest}>
       {children}
     </Tag>
   );
 }
 
-export function Corners() {
-  return (
-    <>
-      <i className="corner tl" aria-hidden="true" />
-      <i className="corner tr" aria-hidden="true" />
-      <i className="corner bl" aria-hidden="true" />
-      <i className="corner br" aria-hidden="true" />
-    </>
-  );
-}

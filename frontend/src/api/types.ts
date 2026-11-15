@@ -10,7 +10,7 @@
  * is defined by `orbit/schema/export.py::registry_document` and mirrored in
  * `schemas/signals.json`.
  */
-import type { components } from "./schema";
+import type { components, operations } from "./schema";
 
 type Schemas = components["schemas"];
 
@@ -29,6 +29,21 @@ export type OverviewRow = Schemas["OverviewRow"];
 export type EarthPacket = Schemas["EarthPacket"];
 export type OutboxItem = Schemas["OutboxItem"];
 export type ConsentUpdate = Schemas["ConsentUpdate"];
+
+// Symptom triage, the chat check-in (M15)
+export type TriageResult = Schemas["TriageResult"];
+export type TriageSession = Schemas["TriageSession"];
+export type TriageConfirmed = Schemas["TriageConfirmed"];
+export type TriageQuestion = Schemas["TriageQuestion"];
+export type TriageStatus = Schemas["TriageStatus"];
+export type SymptomFinding = Schemas["SymptomFinding"];
+export type PatternScore = Schemas["PatternScore"];
+
+/** The triage POST bodies are documented inline in OpenAPI (the service validates them), so read them from the operations. */
+type JsonBody<Op> = Op extends { requestBody?: { content: { "application/json": infer B } } } ? B : never;
+export type TriageStartBody = JsonBody<operations["triage_start_api_crew__astronaut_id__triage_post"]>;
+export type TriageReplyBody = JsonBody<operations["triage_answer_api_crew__astronaut_id__triage__session_id__answer_post"]>;
+export type TriageConfirmBody = JsonBody<operations["triage_confirm_api_crew__astronaut_id__triage__session_id__confirm_post"]>;
 
 /** `GET /api/health` is declared as a plain dict; this mirrors what it returns. */
 export interface Health {

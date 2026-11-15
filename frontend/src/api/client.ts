@@ -15,6 +15,12 @@ import type {
   OverviewRow,
   RiskAssessment,
   SignalRegistry,
+  TriageConfirmBody,
+  TriageConfirmed,
+  TriageReplyBody,
+  TriageResult,
+  TriageSession,
+  TriageStartBody,
 } from "./types";
 
 export const API_BASE = (import.meta.env.VITE_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
@@ -90,6 +96,7 @@ async function request<T>(path: string, init: RequestInit & { query?: Query } = 
 }
 
 const crewPath = (id: string) => `/api/crew/${encodeURIComponent(id)}`;
+const triagePath = (id: string, sessionId: string) => `${crewPath(id)}/triage/${encodeURIComponent(sessionId)}`;
 
 export const api = {
   signals: (signal?: AbortSignal) => request<SignalRegistry>("/api/signals", { signal }),
@@ -137,8 +144,9 @@ export const api = {
   baselines: (id: string, signalName: string, signal?: AbortSignal) =>
     request<Baseline[]>(`${crewPath(id)}/baselines`, { signal, query: { signal: signalName } }),
 
-  assessments: (id: string, signal?: AbortSignal) =>
-    request<RiskAssessment[]>(`${crewPath(id)}/assessments`, { signal }),
+  /** Score history, oldest first; `end` keeps only assessments at or before that moment. */
+  assessments: (id: string, signal?: AbortSignal, end?: string) =>
+    request<RiskAssessment[]>(`${crewPath(id)}/assessments`, { signal, query: { end } }),
 
   /** Saves the daily check-in and re-assesses at once; 422 lists what is wrong. */
   checkin: (id: string, body: CheckIn, signal?: AbortSignal) =>
@@ -146,4 +154,29 @@ export const api = {
 
   events: (astronautId: string, signal?: AbortSignal) =>
     request<ContextEvent[]>("/api/events", { signal, query: { astronaut_id: astronautId } }),
+
+  // ---- symptom triage, the chat check-in (M15): the astronaut's own view only ----
+
+  /** Start a chat with the first message. Saves nothing as a check-in until confirm. */
+  triageStart: (id: string, body: TriageStartBody) =>
+    request<TriageResult>(`${crewPath(id)}/triage`, { method: "POST", body: JSON.stringify(body) }),
+
+  /** Answer the open question (`value: null` skips it), add `text`, or say `done: true`. */
+  triageAnswer: (id: string, sessionId: string, body: TriageReplyBody) =>
+    request<TriageResult>(`${triagePath(id, sessionId)}/answer`, { method: "POST", body: JSON.stringify(body) }),
+
+  /** Save the findings as a check-in and re-assess. `day` is null when a red flag escalated instead. */
+  triageConfirm: (id: string, sessionId: string, body: TriageConfirmBody = {}) =>
+    request<TriageConfirmed>(`${triagePath(id, sessionId)}/confirm`, { method: "POST", body: JSON.stringify(body) }),
+
+  /** Close the chat without saving anything. */
+  triageCancel: (id: string, sessionId: string) =>
+    request<TriageSession>(`${triagePath(id, sessionId)}/cancel`, { method: "POST" }),
+
+  triageSession: (id: string, sessionId: string, signal?: AbortSignal) =>
+    request<TriageSession>(triagePath(id, sessionId), { signal }),
+
+  /** This astronaut's chats, newest first (`start`/`end` on when they started, real time). */
+  triageSessions: (id: string, signal?: AbortSignal, start?: string, end?: string) =>
+    request<TriageSession[]>(`${crewPath(id)}/triage`, { signal, query: { start, end } }),
 };

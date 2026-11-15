@@ -109,14 +109,14 @@ function HistoryView({
                   key={b.level}
                   y1={b.from}
                   y2={b.to}
-                  fill={tokens.level[b.level] ?? tokens.n500}
-                  fillOpacity={0.12}
+                  fill={tokens.level[b.level] ?? tokens.text3}
+                  fillOpacity={0.09}
                   stroke="none"
-                  label={{ value: levelCopy(b.level).word, position: "insideTopLeft", fill: tokens.ink[b.level] ?? tokens.n700, fontSize: 13 }}
+                  label={{ value: levelCopy(b.level).word, position: "insideTopLeft", fill: tokens.ink[b.level] ?? tokens.text2, fontSize: 12 }}
                 />
               ))}
               {bands.map((b) => (
-                <ReferenceLine key={`l-${b.level}`} y={b.from} stroke={tokens.n400} strokeDasharray="2 4" />
+                <ReferenceLine key={`l-${b.level}`} y={b.from} stroke={tokens.separator} strokeOpacity={0.6} />
               ))}
               <XAxis
                 dataKey="t"
@@ -125,9 +125,9 @@ function HistoryView({
                 domain={[tMin, tMax]}
                 ticks={dayTicks(tMin, tMax, 7)}
                 tickFormatter={dayLabel}
-                stroke={tokens.text}
-                tickLine={{ stroke: tokens.text }}
-                tick={{ fill: tokens.n700, fontSize: 13 }}
+                stroke={tokens.separator}
+                tickLine={false}
+                tick={{ fill: tokens.text2, fontSize: 12 }}
               />
               <YAxis
                 orientation="right"
@@ -135,31 +135,32 @@ function HistoryView({
                 ticks={bands.map((b) => b.from)}
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: tokens.n700, fontSize: 13 }}
+                tick={{ fill: tokens.text2, fontSize: 12 }}
                 width={36}
               />
-              <ReferenceLine x={ms(current.assessed_at)} stroke={tokens.accent700} strokeDasharray="4 3" strokeWidth={1.5} />
+              <ReferenceLine x={ms(current.assessed_at)} stroke={tokens.accent} strokeDasharray="4 4" strokeWidth={1} />
               <Line
                 dataKey="score"
                 type="linear"
                 isAnimationActive={false}
-                stroke={tokens.text}
-                strokeWidth={2}
-                dot={(props: { cx?: number; cy?: number; payload?: { level: string; t: number } }) => (
+                stroke={tokens.accent}
+                strokeWidth={1.75}
+                dot={(props: { cx?: number; cy?: number; payload?: { level: string; t: number; score: number } }) => (
                   <LevelDot
                     key={props.payload?.t}
                     cx={props.cx}
                     cy={props.cy}
                     color={tokens.level[props.payload?.level ?? ""]}
                     level={props.payload?.level}
-                    stroke={tokens.bg}
-                    r={props.payload?.t === ms(current.assessed_at) ? 6.5 : 4.5}
+                    label={props.payload ? `${levelCopy(props.payload.level).word}, score ${formatNumber(props.payload.score, 0)}` : undefined}
+                    stroke={tokens.card}
+                    r={props.payload?.t === ms(current.assessed_at) ? 6 : 3.5}
                   />
                 )}
                 activeDot={false}
               />
               <Tooltip
-                cursor={{ stroke: tokens.n500, strokeWidth: 1 }}
+                cursor={{ stroke: tokens.separator, strokeWidth: 1 }}
                 content={({ active, payload }) => {
                   const row = payload?.[0]?.payload as { t: number; score: number; level: string } | undefined;
                   if (!active || !row) return null;
@@ -179,6 +180,18 @@ function HistoryView({
             </ComposedChart>
           </ResponsiveContainer>
         </figure>
+
+        <ul className="legend" aria-label="Legend">
+          <li>
+            <span className="legend__line" /> Daily score
+          </li>
+          {bands.map((b) => (
+            <li key={b.level}>
+              <LevelIcon level={b.level} size={11} /> {levelCopy(b.level).word} ({b.from}–{b.to})
+            </li>
+          ))}
+          <li className="legend__note">A point's colour is that day's alert level.</li>
+        </ul>
 
         <div className="trend__table">
           <button type="button" className="btn btn-ghost" aria-expanded={showTable} onClick={() => setShowTable((v) => !v)}>
@@ -215,7 +228,7 @@ function HistoryView({
 
       <div className="history__pair">
         <Frame className="panel" aria-labelledby="ew-heading">
-          <h2 id="ew-heading" className="section-label">
+          <h2 id="ew-heading" className="headline">
             Early warning
           </h2>
           {firstAlert && (
@@ -241,7 +254,7 @@ function HistoryView({
 
         <Frame className="panel" aria-labelledby="replay-heading">
           <div className="section-head">
-            <h2 id="replay-heading" className="section-label">
+            <h2 id="replay-heading" className="headline">
               Mission replay
             </h2>
             <span className="secondary data">{formatMissionTime(current.assessed_at)}</span>

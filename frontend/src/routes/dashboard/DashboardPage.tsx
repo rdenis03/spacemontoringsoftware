@@ -8,7 +8,6 @@
  */
 import { useSearchParams } from "react-router-dom";
 import type { DayResult } from "../../api/types";
-import { Frame } from "../../components/Frame";
 import { SegmentedTabs } from "../../components/SegmentedTabs";
 import type { AsyncState } from "../../lib/useAsync";
 import { useRegistry } from "../../state/registry-context";
@@ -46,22 +45,22 @@ export default function DashboardPage({ astronautId, status }: { astronautId: st
 
   return (
     <div className="dashboard">
-      <div className="page-head">
+      <header className="page-head">
         <div className="identity">
-          <Frame as="div" className="identity__mark" aria-hidden="true">
+          <span className="avatar" aria-hidden="true">
             {callsign.charAt(0)}
-          </Frame>
+          </span>
           <div className="identity__text">
-            <p className="identity__meta">
-              <span>{astronaut?.role}</span>
-              <span className="data">{astronautId}</span>
-              {status.data && <span className="data">Mission day {status.data.mission_day}</span>}
+            <h1 className="large-title">{callsign}</h1>
+            <p className="identity__meta secondary">
+              {[astronaut?.role, astronautId, status.data ? `Mission day ${status.data.mission_day}` : null]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
-            <h1 className="identity__name">{callsign}</h1>
           </div>
         </div>
         <SegmentedTabs label="Dashboard views" tabs={TABS} current={tab} onChange={setTab} idPrefix="dash" />
-      </div>
+      </header>
 
       <div role="tabpanel" id={`dash-panel-${tab}`} aria-labelledby={`dash-tab-${tab}`} className="enter" key={tab}>
         {tab === "today" && <Today status={status} astronautId={astronautId} freshness={freshness} />}

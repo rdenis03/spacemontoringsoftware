@@ -6,6 +6,8 @@ export interface AsyncState<T> {
   /** True only while there is nothing to show yet. */
   loading: boolean;
   reload: () => void;
+  /** Show this data now, without a request (a write that already returned the new value). */
+  replace: (data: T) => void;
 }
 
 interface Options {
@@ -43,6 +45,7 @@ export function useAsync<T>(
   });
 
   const reload = useCallback(() => setTick((n) => n + 1), []);
+  const replace = useCallback((data: T) => setStored({ key, data, error: null }), [key]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -76,5 +79,6 @@ export function useAsync<T>(
     error: current.error,
     loading: enabled && current.data === undefined && current.error === null,
     reload,
+    replace,
   };
 }
