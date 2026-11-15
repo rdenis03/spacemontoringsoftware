@@ -8,12 +8,14 @@ without waiting for Earth.
 Built for the NASA Space Apps Challenge. Python, FastAPI and SQLite in the
 backend; React and TypeScript in the frontend.
 
-> **Not medical advice.** All data is simulated, and the scoring weights,
-> red flags and procedures are illustrative.
+> **Not medical advice.** All health data is simulated, and the scoring
+> weights, red flags and procedures are illustrative. Alongside the simulated
+> example events, the demo has two additional real NASA DONKI events, replayed
+> onto mission days 72 and 76.
 
 **Jump to:** [Quick start](#quick-start) · [Quick guide](QUICK_GUIDE.md) ·
 [How it works](#how-it-works) · [Machine learning](#machine-learning) ·
-[For developers](#for-developers)
+[NASA data](#nasa-data-and-resources) · [For developers](#for-developers)
 
 ---
 
@@ -108,7 +110,7 @@ including trained models to compare against.
 
 | Slot | What it does | Default (`orbit.toml`) | Other options |
 |---|---|---|---|
-| `source` | loads data | `files` (example data) | `wearable_csv` (device exports), `simulator` (whole missions) |
+| `source` | loads data | `files` (example data) + `donki` (real NASA space weather, from a local cache) | `wearable_csv` (device exports), `simulator` (whole missions) |
 | `baseline` | your normal per signal | `rolling_median` | |
 | `detector` | spikes and drifts | `robust_z` | |
 | `scorer` | 0–100 score and reasons | `rule_based` | `learned` (trained) |
@@ -282,9 +284,31 @@ need arrives in one context object, which keeps them easy to test and replay.
 
 ---
 
+## NASA data and resources
+
+ORBIT uses real NASA data and builds on NASA research:
+
+- **[NASA DONKI](https://ccmc.gsfc.nasa.gov/tools/DONKI/)** (API via
+  [api.nasa.gov](https://api.nasa.gov/)): the `donki` source turns real solar
+  particle events and geomagnetic storms into stress events. The demo replays
+  a real storm (2025-10-18) and solar particle event (2025-10-22) onto mission
+  days 72 and 76, read from a local cache so nothing touches the network onboard.
+- **NASA Human Research Program**, ["Risk of Adverse Health Event Due to Altered
+  Immune Response"](https://www.nasa.gov/directorates/esdmd/hhp/risk-of-adverse-health-event-due-to-altered-immune-response/): the problem ORBIT addresses.
+- **NASA Evidence Report** (Crucian and Sams, NTRS 20140002769): immune changes
+  in flight and the stressors ORBIT records.
+- **Rooney et al. 2019** (NASA Johnson Space Center, *Frontiers in
+  Microbiology*): why ORBIT watches VZV, HSV-1 and EBV, and why its first
+  procedure is a saliva viral-DNA test.
+
+Where each one is used, and what we learned about the DONKI API:
+**[docs/NASA_RESOURCES.md](docs/NASA_RESOURCES.md)**.
+
+---
+
 ## Limits
 
-- **Simulated data only.** The simulator makes the problem cleaner than real
+- **Simulated health data only.** The simulator makes the problem cleaner than real
   bodies are, so real-world performance is unknown.
 - **Illustrative medicine.** Thresholds, red flags and procedure cards were
   written for the demo, not by flight surgeons.

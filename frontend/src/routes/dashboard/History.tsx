@@ -14,7 +14,7 @@ import {
   YAxis,
 } from "recharts";
 import { api } from "../../api/client";
-import type { Observation, RiskAssessment } from "../../api/types";
+import type { ContextEvent, Observation, RiskAssessment } from "../../api/types";
 import { Frame } from "../../components/Frame";
 import { LevelIcon } from "../../components/LevelIcon";
 import { LevelDot } from "../../components/LevelShape";
@@ -47,23 +47,40 @@ export default function History({ astronautId, freshness }: Props) {
     [astronautId, freshness],
     { enabled: Boolean(astronautId) },
   );
+  // Optional: only adds where an event reason came from (e.g. NASA DONKI and its real date).
+  // If it fails, scores and reasons still show, just without that line.
+  const eventList = useAsync((abort) => api.events(astronautId, abort), [astronautId, freshness], {
+    enabled: Boolean(astronautId),
+  });
+  const events = new Map((eventList.data ?? []).flatMap((e) => (e.event_id ? [[e.event_id, e] as const] : [])));
 
   if (data.error) return <LoadError error={data.error} retry={data.reload} what="assessment history" />;
   if (!data.data) return <Loading what="assessment history" />;
   if (data.data.assessments.length === 0) {
     return <p className="secondary">No assessments yet. They appear once the daily pipeline has run.</p>;
   }
-  return <HistoryView key={astronautId} astronautId={astronautId} assessments={data.data.assessments} symptoms={data.data.symptoms} />;
+  return (
+    <HistoryView
+      key={astronautId}
+      astronautId={astronautId}
+      assessments={data.data.assessments}
+      symptoms={data.data.symptoms}
+      events={events}
+    />
+  );
 }
 
 function HistoryView({
   astronautId,
   assessments,
   symptoms,
+  events,
 }: {
   astronautId: string;
   assessments: RiskAssessment[];
   symptoms: Observation[];
+  /** Stress events by ID, so an event reason can show where it came from (e.g. NASA DONKI and its real date). */
+  events: Map<string, ContextEvent>;
 }) {
   const { registry, member, spec } = useRegistry();
   const tokens = useTokens();
@@ -292,7 +309,12 @@ function HistoryView({
               {(current.contributors ?? []).slice(0, 3).map((c, i) => (
                 <li key={`${c.label}-${i}`}>
                   <span className="numbered__n data">{String(i + 1).padStart(2, "0")}</span>
-                  <span>{c.label}</span>
+                  <span className="numbered__label">
+                    <span>{c.label}</span>
+                    {c.event_id && events.get(c.event_id)?.description && (
+                      <span className="caption secondary">{events.get(c.event_id)?.description}</span>
+                    )}
+                  </span>
                   <span className="secondary data">{formatNumber(c.points, 1)} pts</span>
                 </li>
               ))}

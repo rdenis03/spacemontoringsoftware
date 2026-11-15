@@ -71,14 +71,27 @@ max_questions = 5
 stop_probability = 0.8
 
 # ---- Data sources -----------------------------------------------------------
-# Read in order by `python -m orbit ingest`. Add the M2 simulator and the
-# M5 space-weather feed here as they are built.
+# Read in order by `python -m orbit ingest`.
 
 [[sources]]
 use = "files"
 crew_path = "examples/crew.jsonl"
 observations_path = "examples/observations.jsonl"
 events_path = "examples/context_events.jsonl"
+
+# Real NASA space weather (M5), replayed into the example mission. Onboard it
+# only reads the cache; never the network. Real 2025-10-16 lands on mission
+# day 70 (2027-03-14): a geomagnetic storm on day 72, a solar particle event on day 76.
+# To refresh on the ground: mode = "fetch" (key from NASA_API_KEY, else DEMO_KEY).
+[[sources]]
+use = "donki"
+mode = "cache"
+cache_path = "examples/donki_cache.json"
+real_start = "2025-10-16"
+real_end = "2025-10-26"
+mission_start = "2027-03-14"
+include_cme = false   # 78 CMEs in this window alone; their effects show up as SEP/GST
+include_flr = false   # the FLR endpoint answered 404 (2026-11-15); fields not checked live
 
 # A real watch or ring export (M3, task B11). Uncomment and adjust; the astronaut
 # must already be in the crew. `python -m orbit modules` lists the source.
