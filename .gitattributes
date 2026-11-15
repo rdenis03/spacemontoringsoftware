@@ -1,0 +1,4 @@
+# Weights, reports and card files are compared byte for byte (B09, B24 tests),
+# so they stay LF on every OS, whatever core.autocrlf says.
+*.json  text eol=lf
+*.jsonl text eol=lf
