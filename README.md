@@ -154,6 +154,17 @@ Open **http://localhost:5173** in your browser.
 To put the demo data back after trying things: stop `serve`, run
 `python -m orbit reset`, then start `serve` again.
 
+### Free hosting
+
+- **Backend on Render:** Render → New → Blueprint → this repository. It reads
+  `render.yaml`. The free disk is not persistent, so the demo data is reloaded
+  after each restart, and the first request after ~15 idle minutes is slow.
+- **Frontend on GitHub Pages:** Settings → Pages → Source: *GitHub Actions*,
+  then add the repository variable `VITE_API_URL` (Settings → Secrets and
+  variables → Actions → Variables) with the Render URL. Every push to `main`
+  runs `.github/workflows/pages.yml` and publishes
+  `https://<user>.github.io/<repo>/`.
+
 ---
 
 ## Quick guide
