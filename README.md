@@ -6,16 +6,26 @@ immune system starts to struggle, and tells the crew what to do: onboard,
 without waiting for Earth.
 
 Built for the NASA Space Apps Challenge. Python, FastAPI and SQLite in the
-backend; React and TypeScript in the frontend.
+backend; React and TypeScript in the frontend. It uses **real NASA
+space-weather data** from NASA DONKI.
+
+**Live demo: [rdenis03.github.io/spacemontoringsoftware](https://rdenis03.github.io/spacemontoringsoftware/)**
+· Code: [github.com/rdenis03/spacemontoringsoftware](https://github.com/rdenis03/spacemontoringsoftware)
+
+> The demo's backend runs on a free server that sleeps when nobody uses it. If
+> the site says it can't reach the API, open
+> [the backend's health page](https://orbit-ubgu.onrender.com/api/health), wait
+> about a minute until it answers, then press **Try again**.
 
 > **Not medical advice.** All health data is simulated, and the scoring
 > weights, red flags and procedures are illustrative. Alongside the simulated
 > example events, the demo has two additional real NASA DONKI events, replayed
 > onto mission days 72 and 76.
 
-**Jump to:** [Quick start](#quick-start) · [Quick guide](QUICK_GUIDE.md) ·
-[How it works](#how-it-works) · [Machine learning](#machine-learning) ·
-[NASA data](#nasa-data-and-resources) · [For developers](#for-developers)
+**Jump to:** [Live demo](https://rdenis03.github.io/spacemontoringsoftware/) ·
+[Quick guide](QUICK_GUIDE.md) · [How it works](#how-it-works) ·
+[NASA data](#nasa-data-and-resources) · [Machine learning](#machine-learning) ·
+[Quick start](#quick-start) · [For developers](#for-developers)
 
 ---
 
@@ -49,6 +59,9 @@ on their own.
    correct, and saves it as their check-in.
 6. **Keeps private data private.** Symptoms and mood stay onboard unless the
    astronaut chooses to share them with Earth.
+7. **Counts real space weather as a stressor.** Solar particle events and
+   geomagnetic storms from NASA's DONKI database become events in the mission,
+   and they add to the score while they matter.
 
 ---
 
@@ -61,7 +74,7 @@ flowchart LR
   W["Wearables: temperature, heart, sleep"] --> S["Shared store"]
   C["Check-in or chat: symptoms, mood, stress"] --> S
   L["Onboard labs: saliva virus DNA, CRP"] --> S
-  E["Events: spacewalks, solar storms"] --> S
+  E["Events: spacewalks, NASA DONKI space weather"] --> S
   S --> B["Baseline: your normal"]
   B --> D["Detector: spikes and drifts"]
   D --> R["Scorer: 0 to 100 and a level"]
@@ -156,16 +169,18 @@ Open **http://localhost:5173** in your browser.
 To put the demo data back after trying things: stop `serve`, run
 `python -m orbit reset`, then start `serve` again.
 
-### Free hosting
+### Live deployment
 
-- **Backend on Render:** Render → New → Blueprint → this repository. It reads
-  `render.yaml`. The free disk is not persistent, so the demo data is reloaded
-  after each restart, and the first request after ~15 idle minutes is slow.
-- **Frontend on GitHub Pages:** Settings → Pages → Source: *GitHub Actions*,
-  then add the repository variable `VITE_API_URL` (Settings → Secrets and
-  variables → Actions → Variables) with the Render URL. Every push to `main`
-  runs `.github/workflows/pages.yml` and publishes
-  `https://<user>.github.io/<repo>/`.
+- **Website:** [rdenis03.github.io/spacemontoringsoftware](https://rdenis03.github.io/spacemontoringsoftware/)
+  on GitHub Pages. Every push to `main` runs `.github/workflows/pages.yml`,
+  which builds `frontend/` with the repository variable `VITE_API_URL` (the
+  backend address) and publishes it.
+- **Backend:** [orbit-ubgu.onrender.com](https://orbit-ubgu.onrender.com/api/health)
+  on Render's free tier, set up from `render.yaml` (Render → New → Blueprint →
+  this repository). It redeploys from `main`. Its disk is not persistent, so
+  every restart reloads the example data, including the NASA DONKI events.
+  After about 15 idle minutes it sleeps, and the next request takes about a
+  minute.
 
 ---
 
@@ -232,7 +247,7 @@ python -m orbit run                  # re-run daily assessments
 python -m orbit ingest               # load the sources in orbit.toml
 python -m orbit modules              # which modules exist and which are active
 python -m orbit reset                # delete the database
-python -m pytest                     # 568 tests
+python -m pytest                     # 607 tests
 ```
 
 Every command accepts `--config path/to/orbit.toml` and `--database path` (or `":memory:"`).
@@ -268,7 +283,7 @@ cards/         procedure cards, questions, red flags, symptom words (hand-writte
 examples/      the demo data: mission days 70–90 for two astronauts
 experiments/   configs that switch on the trained models
 reports/       committed evaluation results
-tests/         568 tests: schema, store, pipeline, contracts, API, models and chat
+tests/         607 tests: schema, store, pipeline, contracts, API, models and chat
 ```
 
 ### Adding a module
@@ -285,6 +300,55 @@ need arrives in one context object, which keeps them easy to test and replay.
 ---
 
 ## NASA data and resources
+
+### Real space weather from NASA DONKI
+
+Solar storms and radiation are part of the stress that weakens astronauts'
+immune systems, so ORBIT counts them as events, like a spacewalk or a night of
+broken sleep. Instead of only simulating them, ORBIT reads **real space-weather
+events from NASA's DONKI database** (Space Weather Database Of Notifications,
+Knowledge, Information) through the [NASA Open APIs](https://api.nasa.gov/).
+
+**How it works**, modelled on a real mission:
+
+1. **On the ground,** the `donki` source (`orbit/modules/space_weather.py`) in
+   `fetch` mode downloads solar particle events (SEP) and geomagnetic storms
+   (GST) for a date range and saves the raw NASA responses to a cache file.
+   The API key comes from the `NASA_API_KEY` environment variable and is never
+   saved.
+2. **Onboard,** the same source in `cache` mode reads only that file, with no
+   network, as a spacecraft would after an uplink.
+3. Each NASA record becomes a crew-wide event with a severity (for example a
+   storm's maximum Kp index), its real NASA ID and date in the description,
+   and the scorer adds 1 to 10 points while it is recent.
+4. The example mission is set in 2027, so ORBIT **replays** a real window onto
+   it: `examples/donki_cache.json` holds NASA's real records for
+   2025-10-16 to 2025-10-26, shifted so that 2025-10-16 becomes mission day 70.
+
+**What you see in the demo:** open **Today → History** and replay to
+
+- **day 73:** "Geomagnetic storm today", from the real storm of 18 October 2025
+  (max Kp 6, low severity, +1 point);
+- **day 76:** "Solar particle event today", from the real event of
+  22 October 2025 (moderate, +3 points), plus the storm 3 days earlier.
+
+"Show details" names the source: *NASA DONKI GST 2025-10-18T18:00Z, max Kp 6
+(real event, replayed)*. The demo story itself (yellow on day 89, orange on
+day 90) is unchanged.
+
+**What we learned about the API:** one request covers at most 60 days (the
+source splits longer ranges); one solar particle event is listed once per
+instrument (the source merges records within 6 hours); and the flare endpoint
+answered 404 during development, so flares and CMEs are off by default.
+
+**To replay a different real window:** in a copy of `orbit.toml`, set the
+`donki` source to `mode = "fetch"` with a new `real_start` and `real_end`
+(60 days or less per request is handled for you), set `NASA_API_KEY`, and run
+`python -m orbit --config <your copy> --database ":memory:" ingest`. That
+writes the cache; switch back to `mode = "cache"` for normal use, and check the
+day-by-day scores, since stronger events add more points.
+
+### All NASA sources ORBIT uses
 
 ORBIT uses real NASA data and builds on NASA research:
 
@@ -303,6 +367,18 @@ ORBIT uses real NASA data and builds on NASA research:
 
 Where each one is used, and what we learned about the DONKI API:
 **[docs/NASA_RESOURCES.md](docs/NASA_RESOURCES.md)**.
+
+---
+
+## Use of AI tools
+
+As the NASA Space Apps rules ask, we state where AI was used. The team
+designed ORBIT and directed the work; large-language-model coding assistants
+helped write and review code, tests and documentation, and every change was
+reviewed and tested by the team (607 automated tests). The 20 provisional test
+sentences in `tests/fixtures/triage/human_sentences.jsonl` were AI-written and
+are labelled `"stub"`; they are to be replaced by sentences written by people.
+No AI-generated images, video or audio are used, and no NASA logos or branding.
 
 ---
 
