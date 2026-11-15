@@ -56,15 +56,15 @@ on their own.
 
 ```mermaid
 flowchart LR
-  W[Wearables<br/>temp, heart, sleep] --> S[(Shared store)]
-  C[Check-in or chat<br/>symptoms, mood, stress] --> S
-  L[Onboard labs<br/>saliva virus DNA, CRP] --> S
-  E[Events<br/>spacewalks, solar storms] --> S
-  S --> B[Baseline<br/>your normal]
-  B --> D[Detector<br/>spikes and drifts]
-  D --> R[Scorer<br/>0–100 and a level]
-  R --> A[Action cards<br/>what to do]
-  R --> G[Consent gate<br/>what Earth may see]
+  W["Wearables: temperature, heart, sleep"] --> S["Shared store"]
+  C["Check-in or chat: symptoms, mood, stress"] --> S
+  L["Onboard labs: saliva virus DNA, CRP"] --> S
+  E["Events: spacewalks, solar storms"] --> S
+  S --> B["Baseline: your normal"]
+  B --> D["Detector: spikes and drifts"]
+  D --> R["Scorer: 0 to 100 and a level"]
+  R --> A["Action cards: what to do"]
+  R --> G["Consent gate: what Earth may see"]
 ```
 
 Every reading goes into one shared store. Each day ORBIT compares the newest
@@ -76,14 +76,14 @@ for 2 days, +9 points"), and picks the procedure cards that fit.
 
 ```mermaid
 flowchart LR
-  M[Your message] --> F{Red-flag check}
-  F -- urgent --> X[Get medical help now]
-  F -- ok --> E[Extractor<br/>which symptoms, how strong, what is denied]
-  E --> R[Reasoner<br/>possible patterns]
-  R -->|unsure| Q[One follow-up question]
+  M["Your message"] --> F{"Red-flag check"}
+  F -- urgent --> X["Get medical help now"]
+  F -- ok --> E["Extractor: symptoms, strength, what is denied"]
+  E --> R["Reasoner: possible patterns"]
+  R -- unsure --> Q["One follow-up question"]
   Q --> F
-  R -->|sure enough| P[Report you can correct]
-  P -->|save| S[Saved as the check-in<br/>score updated, procedures]
+  R -- sure enough --> P["Report you can correct"]
+  P -- save --> S["Saved as the check-in: score updated, procedures"]
 ```
 
 - **Safety first.** Every message, answer and correction passes a red-flag
