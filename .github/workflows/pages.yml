@@ -1,4 +1,10 @@
-name: Deploy the website to GitHub Pages
+# Builds the frontend and publishes it to GitHub Pages on every push to main.
+#
+# One-time setup in the repository settings:
+#   1. Settings → Pages → Source: "GitHub Actions".
+#   2. Settings → Secrets and variables → Actions → Variables → New variable:
+#      VITE_API_URL = the public URL of the backend (e.g. https://orbit-xxxx.onrender.com)
+name: Deploy frontend to GitHub Pages
 
 on:
   push:
@@ -15,23 +21,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    env:
-      VITE_API_URL: ${{ vars.VITE_API_URL }}
-      BASE_PATH: /${{ github.event.repository.name }}/
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Check the backend address is set
-        run: |
-          if [ -z "$VITE_API_URL" ]; then
-            echo "Set the repository variable VITE_API_URL (Settings > Secrets and variables > Actions > Variables) to your backend address."
-            exit 1
-          fi
 
       - uses: actions/setup-node@v4
         with:
@@ -39,23 +35,25 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - run: npm ci
-      - run: npm run build
+      - name: Install
+        run: npm ci
+        working-directory: frontend
 
-      # GitHub Pages has no rewrites: serve the app for every path (reloading /today etc.)
-      - run: cp dist/index.html dist/404.html
+      - name: Build
+        run: npm run build
+        working-directory: frontend
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
 
-      - uses: actions/configure-pages@v5
+      # Pages has no SPA fallback: serve index.html for unknown paths so that
+      # reloading /crew, /earth, ... still loads the app.
+      - name: SPA fallback
+        run: cp frontend/dist/index.html frontend/dist/404.html
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/dist
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
