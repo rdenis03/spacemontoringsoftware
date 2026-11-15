@@ -252,3 +252,15 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - API: `POST /api/crew/{id}/triage`, `.../{session}/answer`, `.../confirm`, `.../cancel`; `GET .../triage` and `.../triage/{session}` (refused with `?view=shared`). Errors: unknown astronaut/session 404, closed session 409, bad answer 422.
 - CLI: `python -m orbit triage AST-01 "<text>" --as-of ... --answer ...`; the worked example in SPEC M15 gives yellow 44.7. `python -m orbit modules` lists the two new slots.
 - `[triage]` block in `orbit.toml`: B24 switches its `use` lines only after its switch rules pass. A failing reasoner is recorded in errors and leaves the re-assessment's cards.
+
+## B24 · Symptom triage v2: the models
+
+- Simulator options `symptom_lookalikes=False`, `mild_illness_rate=0.0` (off = byte-identical; seed-1 hash pinned in `tests/test_simulator_symptoms.py`). New non-alerting `ScenarioType.STRESS_LOAD`; `tests/test_labels.py` now expects 8 scenario types.
+- New modules, not active: `extractor` `text_linear` (`orbit/modules/extractor_learned.py`, weights `orbit/learning/text_weights.json`) and `reasoner` `bayes` (`orbit/modules/reasoner_bayes.py`, weights `orbit/learning/reasoner_weights.json`). Only the trainers import scikit-learn; modules never import `orbit.learning` at the top.
+- Trainers: `python -m orbit.learning.train_text --seed 1` and `python -m orbit.learning.train_reasoner --seeds 1-20 --days 180 --crew 4`. Both refuse seeds 101-105 (`HELD_OUT_SEEDS`). Shipped weights equal a retrain byte for byte (tested for the reasoner).
+- Bayes lab tables: a lab counts on a chat day when the preview's recent window (pipeline `recent_days`, 3) holds a reading: "yes" if the preview flags it, "no" if not; no reading in the window is skipped (`lab_values`). Same window as the preview, so training matches run time. At run time `observe()` emits only "yes". CRP stays near 0.5 for most patterns (rarely measured outside respiratory days).
+- `bayes` refuses answer tables whose keys differ from the question bank's `answer_keys`; it checks `stop_probability` after screening and missing-severity questions (`rules` checks before).
+- `text_linear`: anchors split by "and" are separate mentions with their own negation; any positive one makes the finding positive (as `lexicon`). The loader needs exactly the 8 symptom heads.
+- Evaluation: `python -m orbit.evaluation.triage --config orbit.toml --config experiments/triage_learned.toml --seeds 101-105 ...` -> `reports/triage_eval.json`. Answer likelihoods are hand-set: reasoner numbers measure consistency, not medical truth.
+- Decision: **no switch**. `bayes` loses on top-1/top-3 without answers (0.976/0.991 vs 0.994/1.000; Brier 0.040 vs 0.191). `text_linear` wins only on the 20-line stub; about 200 human-written sentences are still needed in `tests/fixtures/triage/human_sentences.jsonl`.
+- `TriageResult.model_version` is unchanged (`lexicon-0.1+rules-0.1`). `tests/test_triage_cli.py` now allows extra modules on the `extractor`/`reasoner` lines of `orbit modules`.

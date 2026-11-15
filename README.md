@@ -216,3 +216,62 @@ with config paths made relative):
 ```bash
 python -m orbit.evaluation --config orbit.toml --config experiments/learned.toml     --days 180 --crew 4 --seeds 101 102 103 104 105 --out reports/learned_vs_starter.json
 ```
+
+### Symptom triage: learned modules vs starters (B24)
+
+**Simulated, not clinical.** `experiments/triage_learned.toml` (extractor
+`text_linear`, reasoner `bayes`) against the starters (`lexicon`, `rules`), on
+seeds 101 to 105, which no training saw: 180 days x 4 crew with
+`symptom_lookalikes` on and 30 % mild illnesses, 459 simulated chats.
+
+**The answer likelihoods in `cards/questions.jsonl` are hand-set.** The bayes
+tables learn its answer tables from answers drawn from them, and the simulated
+astronaut answers from them too, so anything measured *with* answers is
+consistency with the bank, not medical truth. The main reasoner comparison is
+therefore **without answers**: the ranking after the first message (symptoms
+from the text, vitals, labs and events only). Both reasoners read the chats with
+the same extractor (`lexicon`).
+
+| Metric | `lexicon` + `rules` (starters) | `text_linear` + `bayes` |
+|---|---|---|
+| Extractor macro F1 on human sentences ‡ | 0.96 | 0.96 (0.964 vs 0.957) |
+| Negation accuracy ‡ | 0.91 | 0.94 |
+| Severity within one level ‡ | 0.88 | 0.88 |
+| Red-flag recall (41 sentences; the gate runs before any model) | 1.00 | 1.00 |
+| Reasoner top-1, **without answers** | 0.99 | 0.98 |
+| Reasoner top-3, **without answers** | 1.00 | 0.99 |
+| Reasoner Brier score, **without answers** (lower is better) | 0.19 | 0.04 |
+| Reasoner top-1 / Brier with answers (circular) | 0.97 / 0.15 | 0.98 / 0.04 |
+| Questions per chat | 3.6 | 1.5 |
+| M9 with confirmed chats: sensitivity, false alarms / 30 d | 0.975, 0.008 | 0.975, 0.008 |
+
+‡ **Provisional.** `tests/fixtures/triage/human_sentences.jsonl` is a 20-line
+stub written by the same author as the training templates. About 200
+sentences from people who never saw the templates are still needed.
+
+- **No switch: `orbit.toml` keeps `lexicon` and `rules`.**
+- `bayes` is much better calibrated (Brier 0.04 vs 0.19) and asks fewer
+  questions, but on the main comparison it ranks the true pattern first a
+  little less often (0.976 vs 0.994) and misses the top 3 in 4 of 459 chats.
+  The switch rule asks it to beat `rules` on top-1, top-3 *and* Brier, so it fails.
+- Lab tables: a lab counts on a chat day when the preview's recent window
+  (pipeline `recent_days`, 3) holds a reading, the same reading the scorer
+  shows: "yes" if the preview flags it, "no" if not; no reading in the window
+  is skipped. The saliva panel measures all three viruses, so a
+  positive points clearly to its virus. CRP is measured almost only on
+  respiratory days in the simulator, so its table stays near 0.5 for most
+  patterns, and 3 of 73 respiratory chats are ranked first as something else.
+- `text_linear` beats `lexicon` on F1 and negation, but only on the stub; it
+  is not recommended until the human-written sentences exist.
+- The M9 numbers do not change with chats for either pair: the confirmed chat
+  stores what the 07:00 check-in already said.
+- The simulated task is easy (only VZV gives a rash, only HSV-1 mouth sores),
+  so both reasoners are near 1 on top-3. Real words and real illnesses are harder.
+
+Reproduce (about 4 minutes; the report is committed as `reports/triage_eval.json`):
+
+```bash
+python -m orbit.learning.train_text --seed 1 --out orbit/learning/text_weights.json
+python -m orbit.learning.train_reasoner --seeds 1-20 --days 180 --crew 4 --out orbit/learning/reasoner_weights.json
+python -m orbit.evaluation.triage --config orbit.toml --config experiments/triage_learned.toml --seeds 101-105 --days 180 --crew 4 --out reports/triage_eval.json
+```

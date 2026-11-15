@@ -45,6 +45,7 @@ class ScenarioType(StrEnum):
     SOLAR_PARTICLE_EVENT = "solar_particle_event"
     SENSOR_FAULT = "sensor_fault"
     MISSING_DATA = "missing_data"
+    STRESS_LOAD = "stress_load"  # B24: high stress, low mood, headache; no vital change
 
 
 ALERTING_SCENARIOS: frozenset[ScenarioType] = frozenset(

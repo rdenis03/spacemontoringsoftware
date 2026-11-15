@@ -23,6 +23,9 @@ Options (all defaulted; the defaults are small so the contract test is fast):
     confounders    True                     for "random": add spacewalks, sleep shifts, solar events
     faults         True                     for "random": add sensor faults and missing nights
     labels_path    None                     if set, read() also writes the labels as JSONL here
+    symptom_lookalikes  False               B24: look-alikes that cause symptoms (below)
+    mild_illness_rate   0.0                 B24, "random" only: share of illnesses that are
+                                            mild (vital changes 30-50 % of the usual size)
 
 In list mode (``scenarios`` is a list) the run contains **exactly** what is
 listed: no random illnesses, look-alikes or faults are added, whatever
@@ -90,6 +93,31 @@ They should **not** alert. Each one is a ``LookAlike`` in ``self.lookalikes``
 * ``missing_data`` (fault): no wearable records for ``nights`` = 1-2 nights.
 
 Event IDs are ``f"{astronaut or 'CREW'}-{event_type}-{yyyymmdd}"``.
+
+Symptom look-alikes and mild illness (B24)
+------------------------------------------
+For training and testing the triage models (M15): symptoms that do not come
+from an illness, and illnesses that barely change the vitals. Both are off by
+default and then draw no random numbers, so the default output is
+byte-identical to B04 (pinned by a SHA-256 in ``tests/test_simulator_symptoms.py``).
+
+* ``symptom_lookalikes=True``: the morning after a spacewalk, muscle aches 1-2
+  and fatigue 1; on every sleep-shift day, fatigue 1 and (half the days)
+  headache 1. In "random" mode with ``confounders`` it also places
+  ``stress_load`` look-alikes (``STRESS_LOAD_RATE`` = 1 per astronaut per 90
+  days, 2-4 days, no overlap with the astronaut's other look-alikes).
+* ``stress_load`` (``ScenarioType.STRESS_LOAD``, should not alert): stress 4-5,
+  mood 2 and headache 1 for ``nights`` = 2-4 days, no vital change, no event.
+  It may also be listed in list mode (``{type = "stress_load", astronaut =
+  "AST-01", day = 40, nights = 3}``), with or without ``symptom_lookalikes``.
+* Look-alike check-in levels raise symptoms and stress to at least the level
+  and lower mood to at most it (on top of any illness on the same day).
+* ``mild_illness_rate=r``: each random illness is mild with chance ``r``; its
+  vital changes are scaled by 0.3-0.5. Symptoms, saliva DNA and CRP are
+  unchanged, so the symptoms lead. The label's notes start with "Mild".
+
+These draws come from extra generators seeded after the look-alikes, only
+when the option is on.
 
 ``scenarios`` as a list of tables, for example in TOML::
 
@@ -317,7 +345,18 @@ LOOKALIKE_NAMES = {
     T.SOLAR_PARTICLE_EVENT: "Solar particle event",
     T.SENSOR_FAULT: "Sensor fault",
     T.MISSING_DATA: "Missing wearable data",
+    T.STRESS_LOAD: "Stress load",
 }
+
+# ---- symptom look-alikes and mild illness (B24) ------------------------------
+
+NIGHTS[T.STRESS_LOAD] = (2, 4)
+STRESS_LOAD_RATE = 1.0  # "random" with symptom_lookalikes: per astronaut per 90 days
+STRESS_LEVELS = (4, 5)  # stress on each stress-load day
+STRESS_MOOD = 2
+EVA_ACHES = (1, 2)  # muscle aches the morning after a spacewalk; fatigue 1
+SLEEP_SHIFT_HEADACHE_CHANCE = 0.5  # per sleep-shift day; fatigue 1 every day
+MILD_VITAL_SCALE = (0.3, 0.5)  # a mild illness's vital changes, as a share of the usual
 
 
 @dataclass(frozen=True)
@@ -333,6 +372,7 @@ class Episode:
     symptoms: tuple[tuple[SignalType, int], ...]  # (signal, level on day 0)
     lab_peak: float  # viral: log10 copies/mL; respiratory: CRP mg/L added
     virus: str | None = None
+    vital_scale: float = 1.0  # B24 mild illness: 0.3-0.5; scales the vital changes only
 
     @property
     def first_day(self) -> int:
@@ -356,12 +396,16 @@ class Episode:
             for signal, (lo, hi) in VIRAL_RAMPS.items():
                 out[signal] = self._ramp(rel, lo, hi)
             out[S.HRV_RMSSD] *= self.hrv_normal
+            if self.vital_scale != 1.0:
+                out = {s: v * self.vital_scale for s, v in out.items()}
             dna = self._dna(rel)
             if dna:
                 out[VIRUS_DNA[self.virus]] = dna  # shows only on weekly lab days
         else:
             for signal, peak in RESPIRATORY_PEAKS.items():
                 out[signal] = self._ramp(rel, RESPIRATORY_START_FRACTION * peak, peak)
+            if self.vital_scale != 1.0:
+                out = {s: v * self.vital_scale for s, v in out.items()}
         for signal, level in self._symptoms(rel):
             out[signal] = out.get(signal, 0.0) + level
         return {s: v for s, v in out.items() if v}
@@ -378,6 +422,8 @@ class Episode:
     def label(self, day_start: Callable[[int], datetime]) -> ScenarioLabel:
         name = (f"{VIRUS_NAMES[self.virus]} reactivation" if self.virus
                 else "Respiratory infection")
+        if self.vital_scale != 1.0:
+            name = f"Mild {name[0].lower()}{name[1:]}" if not self.virus else f"Mild {name}"
         return ScenarioLabel(
             label_id=f"{self.astronaut_id}-{self.scenario.value}-d{self.symptom_day:03d}",
             astronaut_id=self.astronaut_id,
@@ -437,10 +483,20 @@ class LookAlike:
     hrv_normal: float = 0.0  # spacewalk: the astronaut's HRV normal
     dose_factor: float = 1.0  # solar particle event
     fault_signal: SignalType | None = None  # sensor fault
+    # B24: check-in levels as (day offset from ``day``, signal, level). Symptoms and
+    # stress are raised to at least the level, mood lowered to at most it.
+    levels: tuple[tuple[int, SignalType, int], ...] = ()
 
     @property
     def first_day(self) -> int:
         return self.day
+
+    def levels_on(self, astronaut: str, mission_day: int) -> dict[SignalType, int]:
+        """Check-in levels this look-alike sets for one astronaut and day ({} if none)."""
+        if not self.levels or not self._hits(astronaut, mission_day):
+            return {}
+        rel = mission_day - self.day
+        return {signal: level for offset, signal, level in self.levels if offset == rel}
 
     @property
     def last_day(self) -> int:
@@ -557,6 +613,8 @@ class MissionSimulator:
         confounders: bool = True,
         faults: bool = True,
         labels_path: str | None = None,
+        symptom_lookalikes: bool = False,
+        mild_illness_rate: float = 0.0,
     ):
         if days < 1:
             raise ValueError("days must be at least 1")
@@ -564,6 +622,10 @@ class MissionSimulator:
             raise ValueError("crew_size must be between 1 and 99")
         if illness_rate < 0:
             raise ValueError("illness_rate must not be negative")
+        if not 0 <= mild_illness_rate <= 1:
+            raise ValueError("mild_illness_rate must be between 0 and 1")
+        self.symptom_lookalikes = symptom_lookalikes
+        self.mild_illness_rate = mild_illness_rate
         self.days = days
         self.crew_size = crew_size
         self.seed = seed
@@ -603,6 +665,20 @@ class MissionSimulator:
             lookalikes = self._random_lookalikes(lookalike_rng)
         else:
             episodes, lookalikes = self._inline_scenarios(scenarios, episode_rng)
+        # B24 options draw from their own generators, and only when switched on,
+        # so the default output stays byte-identical.
+        if symptom_lookalikes:
+            symptom_rng = random.Random(rng.getrandbits(64))
+            if scenarios == "random" and confounders:
+                for member in self.crew:
+                    for _ in range(_poisson(symptom_rng, STRESS_LOAD_RATE * days / 90)):
+                        self._place_lookalike(symptom_rng, T.STRESS_LOAD,
+                                              member.astronaut_id, lookalikes)
+            lookalikes = [self._with_symptoms(x, symptom_rng) for x in lookalikes]
+        if mild_illness_rate > 0 and scenarios == "random":
+            mild_rng = random.Random(rng.getrandbits(64))
+            episodes = [replace(e, vital_scale=mild_rng.uniform(*MILD_VITAL_SCALE))
+                        if mild_rng.random() < mild_illness_rate else e for e in episodes]
         self.episodes: list[Episode] = sorted(
             episodes, key=lambda e: (e.symptom_day, e.astronaut_id))
         self.lookalikes: list[LookAlike] = sorted(
@@ -739,7 +815,26 @@ class MissionSimulator:
             extra["dose_factor"] = rng.uniform(*SOLAR_DOSE_FACTOR)
         elif kind is T.SENSOR_FAULT:
             extra["fault_signal"] = rng.choice(tuple(FAULT_VALUES))
+        elif kind is T.STRESS_LOAD:
+            extra["levels"] = tuple(
+                item for rel in range(nights) for item in (
+                    (rel, S.STRESS, rng.choice(STRESS_LEVELS)), (rel, S.MOOD, STRESS_MOOD),
+                    (rel, S.SYMPTOM_HEADACHE, 1)))
         return LookAlike(scenario=kind, astronaut_id=astronaut, day=day, nights=nights, **extra)
+
+    @staticmethod
+    def _with_symptoms(lookalike: LookAlike, rng: random.Random) -> LookAlike:
+        """B24: give a spacewalk or sleep shift the symptoms it causes (others unchanged)."""
+        if lookalike.scenario is T.EVA_EXERTION:  # the morning after (day offset 1)
+            levels = ((1, S.SYMPTOM_MUSCLE_ACHES, rng.choice(EVA_ACHES)), (1, S.SYMPTOM_FATIGUE, 1))
+        elif lookalike.scenario is T.SLEEP_SHIFT:
+            levels = tuple(item for rel in range(lookalike.nights) for item in (
+                ((rel, S.SYMPTOM_FATIGUE, 1),)
+                + (((rel, S.SYMPTOM_HEADACHE, 1),)
+                   if rng.random() < SLEEP_SHIFT_HEADACHE_CHANCE else ())))
+        else:
+            return lookalike
+        return replace(lookalike, levels=levels)
 
     def _inline_scenarios(self, tables, rng: random.Random) -> tuple[list[Episode], list[LookAlike]]:
         if isinstance(tables, str) or not isinstance(tables, (list, tuple)):
@@ -841,6 +936,7 @@ class MissionSimulator:
         episodes = [e for e in self.episodes if e.astronaut_id == astronaut]
         faults = [x for x in self.lookalikes if x.scenario in FAULTS
                   and x.astronaut_id == astronaut]
+        symptom_lookalikes = [x for x in self.lookalikes if x.levels]
         records: list[Observation] = []
 
         for mission_day in range(1, self.days + 1):
@@ -860,8 +956,18 @@ class MissionSimulator:
                 value = _clamp(signal, healthy + offsets.get(signal, 0.0))
                 return round(value, DIGITS[signal])
 
+            levels: dict[SignalType, int] = {}
+            for x in symptom_lookalikes:
+                for signal, level in x.levels_on(astronaut, mission_day).items():
+                    worse = min if signal is S.MOOD else max
+                    levels[signal] = worse(levels.get(signal, level), level)
+
             def ordinal(signal: SignalType, healthy: float) -> int:
-                return int(_clamp(signal, round(healthy + offsets.get(signal, 0.0))))
+                value = int(_clamp(signal, round(healthy + offsets.get(signal, 0.0))))
+                if signal in levels:  # B24 symptom look-alikes: low mood down, the rest up
+                    value = min(value, levels[signal]) if signal is S.MOOD \
+                        else max(value, levels[signal])
+                return value
 
             # 06:00 nightly vitals and sleep. A missing night or a broken sensor
             # still uses up its noise draw, so no other value changes.

@@ -23,3 +23,5 @@ from . import scorer_learned  # noqa: F401
 from . import ingestion  # noqa: F401
 from . import extractor  # noqa: F401
 from . import reasoner  # noqa: F401
+from . import extractor_learned  # noqa: F401
+from . import reasoner_bayes  # noqa: F401

@@ -1,0 +1,77 @@
+# ORBIT experiment: the learned triage modules (M15, task B24).
+# A copy of orbit.toml with [triage.extractor] use = "text_linear" and
+# [triage.reasoner] use = "bayes". orbit.toml keeps the starters (lexicon, rules)
+# until the switch rules in tasks/B24-triage-ml.md pass and the team agrees.
+# Compare:  python -m orbit.evaluation.triage --config orbit.toml \
+#             --config experiments/triage_learned.toml --seeds 101-105 --days 180 --crew 4 \
+#             --out reports/triage_eval.json
+# Chat:     python -m orbit --config experiments/triage_learned.toml triage AST-01 "<text>" ...
+# Paths are relative to THIS file, so "../" points at the project root.
+
+[mission]
+name = "ORBIT demo mission (learned triage)"
+assessment_hour_utc = 10
+
+[storage]
+database = "../data/triage_learned.db"   # its own database, so data/orbit.db stays clean
+
+[pipeline]
+baseline_window_days = 14
+recent_days = 3
+event_lookback_days = 7
+
+[comms]                     # M13
+one_way_delay_minutes = 20
+auto_send_level = "orange"
+
+# ---- Module slots (the same as orbit.toml) ------------------------------------
+
+[modules.baseline]          # M6
+use = "rolling_median"
+min_samples = 5
+
+[modules.detector]          # M7
+use = "robust_z"
+threshold = 2.5
+drift_threshold = 1.5
+drift_days = 2
+
+[modules.scorer]            # M8
+use = "rule_based"
+
+[modules.actions]           # M10
+use = "protocol"
+cards_path = "../cards/action_cards.jsonl"
+max_cards = 3
+
+[modules.sync]              # M13
+use = "consent_gate"
+
+# ---- Symptom triage (M15): the learned modules ----------------------------------
+
+[triage]
+session_timeout_minutes = 120
+patterns_path = "../cards/patterns.jsonl"
+triage_cards_path = "../cards/triage_cards.jsonl"
+red_flags_path = "../cards/red_flags.jsonl"
+
+[triage.extractor]
+use = "text_linear"
+lexicon_path = "../cards/symptom_lexicon.jsonl"   # onsets, body sites, sides, other complaints
+# weights_path = "../orbit/learning/text_weights.json"   # default: the shipped weights
+
+[triage.reasoner]
+use = "bayes"
+questions_path = "../cards/questions.jsonl"
+max_questions = 5
+stop_probability = 0.8
+min_gain_bits = 0.05
+# weights_path = "../orbit/learning/reasoner_weights.json"   # default: the shipped weights
+
+# ---- Data sources -----------------------------------------------------------------
+
+[[sources]]
+use = "files"
+crew_path = "../examples/crew.jsonl"
+observations_path = "../examples/observations.jsonl"
+events_path = "../examples/context_events.jsonl"
