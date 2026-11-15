@@ -1,0 +1,57 @@
+{"_comment": "FIRST DRAFT (task B23) for a person with medical training to review and extend. Each line: text, fires (true/false), rule (the red-flag rule id expected when it fires). Recall on the lines with fires=true must be 100 %."}
+{"text": "I can't breathe properly since the EVA", "fires": true, "rule": "breathing"}
+{"text": "Cant breathe when I lie down", "fires": true, "rule": "breathing"}
+{"text": "I'm short of breath even sitting still", "fires": true, "rule": "breathing"}
+{"text": "Really hard to breathe tonight", "fires": true, "rule": "breathing"}
+{"text": "Having trouble breathing and my chest feels heavy", "fires": true, "rule": "breathing"}
+{"text": "I cannot breathe well", "fires": true, "rule": "breathing"}
+{"text": "No fever, but I'm short of breath", "fires": true, "rule": "breathing"}
+{"text": "My lips are turning blue", "fires": true, "rule": "breathing"}
+{"text": "I can’t catch my breath after the stairs", "fires": true, "rule": "breathing"}
+{"text": "Sharp chest pain when I move", "fires": true, "rule": "chest"}
+{"text": "There is pressure in my chest", "fires": true, "rule": "chest"}
+{"text": "Tight chest and sweating", "fires": true, "rule": "chest"}
+{"text": "My chest hurts a lot", "fires": true, "rule": "chest"}
+{"text": "Not sure what it is, chest pain on and off", "fires": true, "rule": "chest"}
+{"text": "No cough or fever, but chest pain since lunch", "fires": true, "rule": "chest"}
+{"text": "No cough or chest pain", "fires": true, "rule": "chest", "note": "ambiguous: 'or' ends the negation, so it fires (when in doubt, fire)"}
+{"text": "I fainted in the galley this morning", "fires": true, "rule": "faint"}
+{"text": "I passed out for a few seconds", "fires": true, "rule": "faint"}
+{"text": "Almost fainted during the workout", "fires": true, "rule": "faint"}
+{"text": "Blacked out briefly after standing up", "fires": true, "rule": "faint"}
+{"text": "I collapsed in the node", "fires": true, "rule": "faint"}
+{"text": "I think I had a seizure", "fires": true, "rule": "faint"}
+{"text": "I feel confused and slow", "fires": true, "rule": "confused"}
+{"text": "Disoriented, I don't know where I am", "fires": true, "rule": "confused"}
+{"text": "My speech is slurred", "fires": true, "rule": "confused"}
+{"text": "Can't think straight today", "fires": true, "rule": "confused"}
+{"text": "I have a rash near my eye", "fires": true, "rule": "eye"}
+{"text": "A rash near my eye since yesterday", "fires": true, "rule": "eye"}
+{"text": "Tingling around my eye and forehead", "fires": true, "rule": "eye"}
+{"text": "Blisters on my eyelid", "fires": true, "rule": "eye"}
+{"text": "The rash is spreading next to my eye", "fires": true, "rule": "eye"}
+{"text": "Worst headache of my life", "fires": true, "rule": "headache"}
+{"text": "Headache with a stiff neck", "fires": true, "rule": "headache"}
+{"text": "Sudden severe headache out of nowhere", "fires": true, "rule": "headache"}
+{"text": "I can't swallow anything", "fires": true, "rule": "swallow"}
+{"text": "Trouble swallowing water", "fires": true, "rule": "swallow"}
+{"text": "My throat is closing up", "fires": true, "rule": "swallow"}
+{"text": "I'm coughing up blood", "fires": true, "rule": "bleeding"}
+{"text": "Vomiting blood this morning", "fires": true, "rule": "bleeding"}
+{"text": "No chest pain, just tired", "fires": false}
+{"text": "I don't have any trouble breathing", "fires": false}
+{"text": "Not short of breath", "fires": false}
+{"text": "Never fainted, just a bit dizzy", "fires": false}
+{"text": "No stiff neck", "fires": false}
+{"text": "Without chest pain", "fires": false}
+{"text": "I haven't passed out", "fires": false}
+{"text": "I didn't pass out", "fires": false}
+{"text": "Not confused, just tired", "fires": false}
+{"text": "No rash near my eye, it's on my ribs", "fires": true, "rule": "eye", "note": "the cue is not directly before 'near my eye', so it fires (when in doubt, fire)"}
+{"text": "No rash, nothing near my eye", "fires": true, "rule": "eye", "note": "a comma ends the clause"}
+{"text": "I have no chest pain", "fires": false}
+{"text": "No trouble swallowing", "fires": false}
+{"text": "It isn't hard to breathe", "fires": false}
+{"text": "Weird burning, tingly patch on my ribs since last night. Pretty wiped out too.", "fires": false}
+{"text": "Fever since yesterday, no sore throat", "fires": false}
+{"text": "A bit of nausea and a headache after the EVA", "fires": false}

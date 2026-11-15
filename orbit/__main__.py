@@ -5,6 +5,8 @@
     python -m orbit ingest                read the data sources in orbit.toml
     python -m orbit run [--start D] [--end D] [--astronaut ID]
     python -m orbit status AST-01         latest status for one astronaut
+    python -m orbit triage AST-01 "<how you feel>" --as-of 2027-04-02T10:30:00Z [--answer moderate ...]
+                                          a chat check-in in memory on the example data (M15)
     python -m orbit modules               list module slots and implementations
     python -m orbit reset                 delete the database
 
@@ -16,11 +18,12 @@ from __future__ import annotations
 import argparse
 import sys
 from dataclasses import replace
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from orbit.core import Pipeline, Settings, Store, available, create, load_settings
 from orbit.core.interfaces import SLOTS, DayResult
+from orbit.schema import SymptomFinding, get_spec
 
 LEVEL_MARK = {"green": "G", "yellow": "Y", "orange": "O", "red": "R"}
 
@@ -61,13 +64,17 @@ def _print_status(pipeline: Pipeline, result: DayResult) -> None:
 
 
 def cmd_modules(settings: Settings, args: argparse.Namespace) -> int:
+    from orbit.triage.config import load_triage_settings
+
+    triage = load_triage_settings(settings)
+    triage_active = {"extractor": triage.extractor.use, "reasoner": triage.reasoner.use}
     for slot in SLOTS:
-        active = settings.modules[slot].use if slot in settings.modules else None
+        active = settings.modules[slot].use if slot in settings.modules else triage_active.get(slot)
         names = [f"{n} (active)" if n == active else n for n in available(slot)]
         if slot == "source":
             used = {c.use for c in settings.sources}
             names = [f"{n} (used)" if n in used else n for n in available(slot)]
-        print(f"{slot:<9} {', '.join(names)}")
+        print(f"{slot:<10} {', '.join(names)}")
     return 0
 
 
@@ -131,10 +138,115 @@ def cmd_demo(settings: Settings, args: argparse.Namespace) -> int:
     return 0
 
 
+def _describe_finding(finding: SymptomFinding) -> str:
+    if finding.signal is None:
+        text = f"{finding.label} (for the medical officer)"
+    elif finding.negated:
+        text = f"{finding.label}: none"
+    elif finding.severity is None:
+        text = f"{finding.label}: severity not given"
+    else:
+        text = f"{finding.label}: {get_spec(finding.signal).scale_label(finding.severity)}"
+    details = [finding.body_site or "", finding.side.replace("_", " ") if finding.side else ""]
+    if finding.onset_hours is not None:
+        details.append(f"started about {finding.onset_hours:g} h ago")
+    details = [d for d in details if d]
+    words = ", ".join(f'"{e}"' for e in finding.evidence)
+    return text + (" · " + " · ".join(details) if details else "") + (f"   ({words})" if words else "")
+
+
+def cmd_triage(settings: Settings, args: argparse.Namespace) -> int:
+    """A chat check-in (M15), in memory on the configured data, like ``demo``.
+
+    Answers are used in order; when they run out, the session ends as "that's
+    all". The chat is then confirmed, so the new level and score are shown.
+    """
+    from orbit.triage.config import load_triage_settings
+    from orbit.triage.service import TriageError, TriageService
+
+    pipeline = Pipeline.from_settings(settings, store=Store(":memory:"))
+    for choice in settings.sources:
+        pipeline.ingest(create("source", choice.use, **choice.options))
+    pipeline.run()
+    store = pipeline.store
+    member = store.member(args.astronaut_id)
+    if member is None:
+        print(f"error: unknown astronaut '{args.astronaut_id}'", file=sys.stderr)
+        return 2
+    as_of = args.as_of
+    before = store.assessments(member.astronaut_id, end=as_of)
+    service = TriageService.from_settings(load_triage_settings(settings), pipeline)
+    try:
+        result = service.start(member.astronaut_id, args.text, timestamp=as_of)
+        print(f"\n{member.astronaut_id} {member.callsign} · mission day {member.mission_day(as_of)} · "
+              f"{as_of:%Y-%m-%d %H:%M} UTC · triage {service.model_version}")
+        print(f'  You said: "{args.text}"')
+        print("  What ORBIT understood:")
+        for finding in result.findings or ():
+            print(f"    - {_describe_finding(finding)}")
+        if not result.findings:
+            print("    (nothing it knows)")
+        answers, number = list(args.answer or []), 0
+        while result.next_question is not None:
+            question, number = result.next_question, number + 1
+            print(f"  Q{number} {question.text} ({' / '.join(question.choices) or 'a number'})")
+            if not answers:
+                print("     -> no answer given: that's all")
+                result = service.answer(result.session_id, done=True)
+                break
+            reply = answers.pop(0)
+            value = None if reply.lower() == "skip" else reply
+            result = service.answer(result.session_id, question_id=question.question_id, value=value)
+            print(f"     -> {question.answer_word(value)}")
+        if answers:
+            print(f"  ({len(answers)} answer(s) not needed)")
+        if result.red_flags:
+            labels = ", ".join(service.red_flags.rule(r).label for r in result.red_flags)
+            print(f"  RED FLAG: {labels}. Questions stopped; get help now.")
+        if result.ranking:
+            print("  Patterns ORBIT sees (not a diagnosis):")
+            for score in result.ranking[:3]:
+                reasons = "; ".join(r.label for r in score.reasons)
+                print(f"    {score.probability:.2f}  {score.label}" + (f"  because: {reasons}" if reasons else ""))
+        confirmed, day = service.confirm(result.session_id)
+    except TriageError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    saved = [_describe_finding(f).split("   (")[0] for f in confirmed.findings if f.signal is not None]
+    print("  Saved as a check-in: " + ("; ".join(saved) if saved else "no symptoms"))
+    a = day.assessment
+    if a is None:
+        print("  no score: " + "; ".join(day.errors))
+    else:
+        was = f", was {before[-1].level.value.upper()} ({before[-1].score:g}) at " \
+              f"{before[-1].assessed_at:%H:%M}" if before else ""
+        print(f"  Status: {a.level.value.upper()} ({a.score:g}/100){was}")
+    if day.actions:
+        print("  What to do:")
+        for card in day.actions:
+            who = "" if card.escalate_to.value == "self" else f"  -> {card.escalate_to.value.replace('_', ' ')}"
+            print(f"    [{card.title}]{who}")
+            for step in card.steps:
+                print(f"      - {step}")
+    errors = list(confirmed.errors) + list(day.errors)
+    if errors:
+        print("  Module errors: " + "; ".join(errors))
+    return 0
+
+
+def _aware_datetime(text: str) -> datetime:
+    """ISO time for --as-of; no timezone means UTC."""
+    value = datetime.fromisoformat(text)
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+
+
 def cmd_serve(settings: Settings, args: argparse.Namespace) -> int:
     import uvicorn
 
     from orbit.api import create_app
+    from orbit.triage.config import load_triage_settings
+    from orbit.triage.service import TriageService
 
     pipeline = Pipeline.from_settings(settings)
     if pipeline.store.counts()["observations"] == 0 and settings.sources:
@@ -143,7 +255,8 @@ def cmd_serve(settings: Settings, args: argparse.Namespace) -> int:
         print(pipeline.run().summary())
     app = create_app(pipeline, mission_name=settings.mission_name,
                      comms_delay_minutes=settings.comms_delay_minutes,
-                     auto_send_level=settings.comms_auto_send_level)
+                     auto_send_level=settings.comms_auto_send_level,
+                     triage=TriageService.from_settings(load_triage_settings(settings), pipeline))
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
     return 0
 
@@ -186,6 +299,15 @@ def main(argv: list[str] | None = None) -> int:
     status = commands.add_parser("status", help="latest status for one astronaut")
     status.add_argument("astronaut_id")
     status.set_defaults(func=cmd_status)
+
+    triage = commands.add_parser("triage", help="a chat check-in in memory on the example data (M15)")
+    triage.add_argument("astronaut_id")
+    triage.add_argument("text", help="how the astronaut feels, in their own words")
+    triage.add_argument("--as-of", type=_aware_datetime, required=True,
+                        help="the moment assessed, e.g. 2027-04-02T10:30:00Z (mission time)")
+    triage.add_argument("--answer", action="append",
+                        help="answer to the next question, in order (repeatable; 'skip' skips)")
+    triage.set_defaults(func=cmd_triage)
 
     commands.add_parser("modules", help="list module slots").set_defaults(func=cmd_modules)
     commands.add_parser("reset", help="delete the database").set_defaults(func=cmd_reset)

@@ -120,6 +120,40 @@ sending the overall score.
 Why: the challenge puts astronauts in charge of their own health. They report
 more honestly when they control who sees what.
 
+### 8. Triage is a conversation in front of the check-in
+
+The astronaut can describe how they feel in their own words (M15). A triage
+service turns the text into the 8 check-in symptoms, ranks a few plain-word
+patterns ("Signs that fit shingles (VZV)"), asks up to five short questions
+and shows action cards. When the astronaut confirms, the findings are saved as
+an ordinary check-in and the pipeline re-scores, exactly as if they had used
+the 60-second form.
+
+```
+  text ─▶ red-flag rules ─▶ extractor ─▶ reasoner ─▶ question ─┐
+   ▲                                                           │ answer
+   └───────────────────────────────────────────────────────────┘
+  confirm ─▶ check-in observations ─▶ pipeline.assess() ─▶ cards
+```
+
+Why:
+- **It reuses the pipeline.** The chat ends in the same check-in
+  observations, so the scorer, action cards, consent gate, shared view,
+  Earth report and auto-send all work unchanged. There is no second risk score.
+- **It saves nothing until confirm.** Until then the service only previews
+  (`assess(save=False)`), and the raw text stays in the session, never in a
+  note or a packet for Earth. The astronaut can correct or cancel.
+- **Rules run before models.** Fixed red-flag rules ("can't breathe", "chest
+  pain") check every message and answer first. A model may add a red flag but
+  never remove one, so a weak model cannot hide an emergency.
+- **People write the words.** Patterns, questions and cards are hand-written
+  files checked on load. The models choose which card or question fits; they
+  never write text an astronaut reads.
+
+The extractor and reasoner are two new slots, so version 1 (rules, B23) and
+version 2 (learned, B24) can be compared on the same data before switching,
+as with the scorer (B10).
+
 ## One daily assessment, step by step
 
 For each astronaut, once a day at 10:00 UTC (after the night's wearable data
@@ -161,6 +195,9 @@ Keep the starter registered: it is the fallback and the comparison point.
 | actions | `orbit/modules/actions.py` + `examples/action_cards.jsonl` | M10 |
 | check-in, dashboard, crew view | frontend, via `orbit/api/app.py` | M11, M12, M14 |
 | sync | `orbit/modules/consent.py` | M13 |
+| extractor (text → symptoms) | `orbit/modules/extractor.py` + `cards/symptom_lexicon.jsonl` | M15 |
+| reasoner (patterns, next question) | `orbit/modules/reasoner.py` + `cards/questions.jsonl` | M15 |
+| triage service, red flags, triage cards | `orbit/triage/` + `cards/patterns.jsonl`, `triage_cards.jsonl`, `red_flags.jsonl` | M15 |
 
 ## Known limits of the starter modules
 

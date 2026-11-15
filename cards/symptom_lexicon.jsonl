@@ -1,0 +1,47 @@
+{"kind":"symptom","signal":"symptom_fatigue","phrases":["tired","so tired","exhausted","fatigue","fatigued","wiped out","wiped","worn out","drained","no energy","low energy","zero energy","run down","knackered","sluggish","weary","lethargic"]}
+{"kind":"symptom","signal":"symptom_fever_chills","phrases":["fever","feverish","a temperature","high temperature","chills","chilly","shivering","shivers","shivery","night sweats","sweats","burning up","hot and cold"]}
+{"kind":"symptom","signal":"symptom_sore_throat","phrases":["sore throat","throat hurts","throat is sore","scratchy throat","throat pain","painful throat","raw throat","throat feels raw","hurts to swallow"]}
+{"kind":"symptom","signal":"symptom_swollen_glands","phrases":["swollen glands","swollen gland","glands are swollen","glands swollen","tender glands","puffy glands","lumps in my neck","lump in my neck","swollen neck","swollen lymph nodes","lymph nodes"]}
+{"kind":"symptom","signal":"symptom_mouth_sores","phrases":["mouth sores","mouth sore","sore in my mouth","sores in my mouth","cold sore","cold sores","lip sore","sore on my lip","blister on my lip","mouth ulcer","mouth ulcers","ulcer","ulcers","canker sore"]}
+{"kind":"symptom","signal":"symptom_rash_tingling","phrases":["rash","tingling","tingly","tingle","tingly patch","burning","burning patch","burning feeling","pins and needles","blisters","blister","itchy patch","red patch","prickling","stinging"]}
+{"kind":"symptom","signal":"symptom_headache","phrases":["headache","headaches","head ache","head aches","head hurts","head is pounding","pounding head","throbbing head","migraine"]}
+{"kind":"symptom","signal":"symptom_muscle_aches","phrases":["muscle aches","muscle ache","aching muscles","sore muscles","muscles ache","muscles are sore","muscles hurt","muscle pain","stiff muscles","body aches","body ache","achy","aching","aches","sore all over","aching all over","everything aches"]}
+{"kind":"other","label":"Nausea","phrases":["nausea","nauseous","nauseated","queasy","sick to my stomach","feel sick","throwing up","threw up","vomiting","vomited"]}
+{"kind":"other","label":"Dizziness","phrases":["dizzy","dizziness","lightheaded","light headed","woozy","vertigo","room is spinning"]}
+{"kind":"other","label":"Blurry vision","phrases":["blurry vision","blurred vision","vision is blurry","blurry","double vision","seeing double","can't see clearly"]}
+{"kind":"other","label":"Congestion","phrases":["congestion","congested","stuffy nose","blocked nose","runny nose","stuffed up","sinus","sinuses"]}
+{"kind":"other","label":"Back pain","phrases":["back pain","backache","back ache","back hurts","back is sore","sore back","lower back pain"]}
+{"kind":"other","label":"Cough","phrases":["cough","coughing","dry cough"]}
+{"kind":"other","label":"Chest pain","phrases":["chest pain","chest pressure","chest tightness","tight chest","pain in my chest"]}
+{"kind":"other","label":"Trouble breathing","phrases":["short of breath","shortness of breath","trouble breathing","difficulty breathing","hard to breathe","can't breathe","cant breathe","cannot breathe","breathless"]}
+{"kind":"other","label":"Fainting","phrases":["fainted","passed out","blacked out"]}
+{"kind":"other","label":"Confusion","phrases":["confused","confusion","disoriented"]}
+{"kind":"other","label":"Eye pain","phrases":["eye pain","eye hurts","eyes hurt","painful eye"]}
+{"kind":"other","label":"Stomach pain","phrases":["stomach ache","stomach pain","tummy ache","belly ache"]}
+{"kind":"severity","level":1,"phrases":["a bit","a little","a little bit","slight","slightly","mild","mildly","kind of","sort of","somewhat","a touch of"]}
+{"kind":"severity","level":2,"phrases":["pretty","quite","moderate","moderately","fairly","rather","really","very"]}
+{"kind":"severity","level":3,"phrases":["really bad","very bad","so bad","severe","severely","terrible","awful","horrible","extremely","unbearable","the worst"]}
+{"kind":"negation","phrases":["no","not","without","never","none","nor","don't","dont","doesn't","doesnt","didn't","didnt","haven't","havent","hasn't","hasnt","isn't","isnt","wasn't","wasnt","aren't","arent"]}
+{"kind":"scope_break","phrases":["but","and","though","although","however","yet","except"]}
+{"kind":"body_site","label":"ribs","phrases":["ribs","rib","rib cage","ribcage"]}
+{"kind":"body_site","label":"chest","phrases":["chest"]}
+{"kind":"body_site","label":"back","phrases":["back","shoulder blade"]}
+{"kind":"body_site","label":"stomach","phrases":["stomach","belly","tummy","abdomen"]}
+{"kind":"body_site","label":"waist","phrases":["waist","hip","hips"]}
+{"kind":"body_site","label":"arm","phrases":["arm","arms","armpit","elbow"]}
+{"kind":"body_site","label":"shoulder","phrases":["shoulder","shoulders"]}
+{"kind":"body_site","label":"leg","phrases":["leg","legs","thigh","knee"]}
+{"kind":"body_site","label":"hand","phrases":["hand","hands","fingers","wrist"]}
+{"kind":"body_site","label":"foot","phrases":["foot","feet","ankle"]}
+{"kind":"body_site","label":"neck","phrases":["neck"]}
+{"kind":"body_site","label":"face","phrases":["face","cheek","cheeks","jaw","nose"]}
+{"kind":"body_site","label":"eye","phrases":["eye","eyes","eyelid","eyelids"]}
+{"kind":"body_site","label":"forehead","phrases":["forehead","temple","brow"]}
+{"kind":"body_site","label":"lip","phrases":["lip","lips"]}
+{"kind":"body_site","label":"mouth","phrases":["mouth","gums","tongue"]}
+{"kind":"body_site","label":"scalp","phrases":["scalp"]}
+{"kind":"body_site","label":"ear","phrases":["ear","ears"]}
+{"kind":"side","side":"left","phrases":["left side","on the left","my left","the left","left hand side"]}
+{"kind":"side","side":"right","phrases":["right side","on the right","my right","the right","right hand side"]}
+{"kind":"side","side":"both","phrases":["both sides","on both sides","both arms","both legs"]}
+{"kind":"side","side":"one_side","phrases":["one side","on one side","one side only","only one side","just one side","one side of my body"]}

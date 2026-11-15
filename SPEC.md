@@ -188,6 +188,8 @@ File helpers: `parse_jsonl`, `parse_csv`, `parse_records` (return a
 | `actions` | `ActionEngine` | `recommend(assessment, ctx) -> list[ActionCard]` | `card_library` |
 | `sync` | `SyncGate` | `package(member, observations, assessments) -> EarthPacket` | `consent_gate` |
 
+M15 adds two slots, `extractor` and `reasoner`, used only by the triage service, never by the daily pipeline (see M15).
+
 **`AssessmentContext`** (what every analytics stage receives, read-only):
 
 ```
@@ -815,6 +817,478 @@ categories show the neutral label. Show who each card escalates to.
 
 ---
 
+## M15: Symptom triage
+
+**Owner files (B23):** `orbit/schema/triage.py`, `orbit/triage/` (`__init__.py`,
+`library.py`, `red_flags.py`, `service.py`, `config.py`), `orbit/modules/extractor.py`,
+`orbit/modules/reasoner.py`, `cards/symptom_lexicon.jsonl`, `cards/questions.jsonl`,
+`cards/patterns.jsonl`, `cards/triage_cards.jsonl`, `cards/red_flags.jsonl`, and the
+tests listed in `tasks/B23-triage-v1.md`. Allowed core changes: `orbit/core/interfaces.py`
+(`TriageEvidence`, two protocols, `SLOTS`), `orbit/core/store.py` (`triage_sessions`
+only), `orbit/schema/models.py` (`SCHEMA_VERSION` only), exports in
+`orbit/schema/__init__.py` and `orbit/core/__init__.py`, `orbit/api/app.py`,
+`orbit/__main__.py`, and the `[triage]` block of `orbit.toml`.
+**Slots:** `extractor` (starter `lexicon`), `reasoner` (starter `rules`).
+**Not a slot:** the triage service. **Tasks:** B23 (version 1, rules), B24 (version 2, models).
+
+**Goal.** The astronaut describes how they feel in their own words. ORBIT maps
+the text to its 8 symptom signals (with severity, negation, onset, body site
+and side), ranks 8 patterns with a probability and reasons, asks up to 5
+follow-up questions, and replies with action cards. It runs onboard and
+offline, is deterministic and explainable, and saves nothing until the
+astronaut confirms. On confirm, the findings become ordinary `checkin`
+observations and `pipeline.assess()` re-scores, so the scorer, action cards,
+consent gate, shared view, Earth report and auto-send all work unchanged. The
+daily pipeline (`orbit/core/pipeline.py`) does not change.
+
+**Read first:** this section, `orbit/core/interfaces.py`, `Pipeline.assess` in
+`orbit/core/pipeline.py`, `orbit/modules/actions.py`, `orbit/modules/scorer.py`,
+`cards/action_cards.jsonl`, and tasks/NOTES.md B08, B15, B18 and B19.
+
+```
+ text ──▶ red-flag rules ──▶ extractor ──▶ findings ─┐
+ answer ─▶ red-flag rules ─────────────────────────────┤
+ preview = pipeline.assess(as_of, save=False) ─────────┴─▶ reasoner.rank ─▶ reasoner.next_question
+                                                               │                 │
+                                                    procedures (when ready)   question or None
+ confirm ─▶ checkin observations ─▶ pipeline.assess(as_of) ─▶ merge cards ─▶ store.save_day
+```
+
+### Triage service (`orbit/triage/service.py`, not a slot)
+
+- `TriageService` is the only place triage modules meet, as the pipeline is
+  for the analytics. It owns all I/O (store, pipeline) and the wall clock for
+  session timeouts (an injectable `clock`, like `create_app`). Slot modules stay pure.
+- Each turn runs: red-flag rules → extractor (on new free text only) →
+  reasoner (rank, then the next question). Procedures are built when the
+  session is ready or escalated, and again on confirm. While asking, `procedures` is empty.
+- Evidence includes a preview: `pipeline.assess(astronaut_id, as_of, save=False)`
+  gives its assessment and anomalies. B18's auto-send already ignores unsaved previews.
+- Findings carry what the answers said: the service merges each symptom
+  answer into the findings (severity, and `negated` for "none") before the
+  reasoner runs, so a reasoner reads symptoms from `evidence.findings` and
+  uses `evidence.answers` for the other questions.
+- Each step (extractor, preview, rank, next question) runs in an error
+  boundary, and errors go to `TriageResult.errors` (like `DayResult.errors`):
+  `"<step>: <ExceptionType>: <message>"`. A failing reasoner still leaves the
+  re-assessment's cards.
+- Methods: `start(astronaut_id, text, timestamp=None) -> TriageResult`,
+  `answer(session_id, *, question_id=None, value=None, text=None, done=False) -> TriageResult`,
+  `confirm(session_id, corrections=None) -> tuple[TriageResult, DayResult]`,
+  `cancel(session_id) -> TriageSession`, `session(session_id)`,
+  `sessions(astronaut_id, start=None, end=None)`, and
+  `from_settings(triage_settings, pipeline, clock=None)`.
+- The analytics `as_of` is the session's timestamp (`timestamp`, or the clock
+  when it is not given; mission time in the demo), never the clock after that.
+  `started_at` and `updated_at` are wall-clock times. Action cards for pattern
+  lookups come from `pipeline.actions.cards` (both action engines keep their library there).
+- Answers: `question_id` must be the open question (`next_question` of the
+  last result); a question counts as asked once it is answered, and a skipped
+  question is stored with value `None`. `done=True` ends the questions for the
+  session (`TriageSession.done`). Free `text` can be added in any open turn.
+- Sessions time out after `session_timeout_minutes` without a turn
+  (`clock() - updated_at`): an open session becomes `expired` when it is next read.
+- Errors: `SessionNotFound` (unknown id), `SessionClosed` (confirmed,
+  cancelled or expired), `BadAnswer` (wrong question, value outside its
+  answers, bad correction); the API maps them to 404, 409 and 422.
+
+### Two new slots (`orbit/core/interfaces.py`; additive)
+
+```python
+@dataclass(frozen=True)
+class TriageEvidence:
+    findings: tuple[SymptomFinding, ...]
+    answers: tuple[TriageAnswer, ...]
+    asked: tuple[str, ...]            # question ids already asked (answered or skipped)
+    preview: RiskAssessment | None    # assess(save=False) at the session's as_of
+    anomalies: tuple[Anomaly, ...]
+
+class SymptomExtractor(Protocol):     # slot "extractor"
+    def extract(self, report: SymptomReport, ctx: AssessmentContext) -> list[SymptomFinding]: ...
+
+class TriageReasoner(Protocol):       # slot "reasoner"
+    def rank(self, evidence: TriageEvidence, ctx: AssessmentContext) -> list[PatternScore]: ...
+    def next_question(self, evidence: TriageEvidence, ranking: Sequence[PatternScore],
+                      ctx: AssessmentContext) -> TriageQuestion | None: ...
+```
+
+- Both are in `SLOTS`, so `python -m orbit modules` lists them and the
+  registry accepts them. They are **not** in `ANALYTICS_SLOTS` in
+  `orbit/core/config.py`: they are configured under `[triage]`, not
+  `[modules.*]`, and `Pipeline.from_settings` keeps building only the five analytics slots.
+- Slot modules follow rules 4 and 5: pure, and every option has a default.
+  With no options a module uses a small built-in library (like
+  `BUILT_IN_CARDS`), so the contract tests can build it. Reasoners expose
+  `questions` (the bank) and `max_questions` attributes for the contract test.
+
+**Contract tests (`tests/test_triage_contracts.py`)**, parametrized over `available(...)`:
+
+| Slot | Must hold |
+|---|---|
+| extractor | builds with no options; in "Fever since yesterday, no sore throat" finds `symptom_fever_chills` not negated and `symptom_sore_throat` negated; empty text gives `[]`; deterministic; each evidence is a substring of the text, ignoring case |
+| reasoner `rank` | all 8 patterns once each; probabilities sum to 1 ± 1e-6; sorted descending; deterministic; reasons are `Contributor`s; with a rash-or-tingling finding of severity 2, `vzv_like` ranks above `exertion` |
+| reasoner `next_question` | never returns a question in `evidence.asked`; returns `None` once `max_questions` were asked; deterministic |
+
+### Schema (`orbit/schema/triage.py`; exported from `orbit/schema/__init__.py`)
+
+Same base as `labels.py` (`_Model`: frozen, unknown fields rejected;
+`UtcDatetime`, `AstronautId`, `Slug`). `SCHEMA_VERSION` goes from 1.0.0 to
+1.1.0; the store refuses only a major mismatch, so existing databases still open.
+
+- `TriagePattern` (StrEnum): `vzv_like`, `hsv1_like`, `ebv_like`, `respiratory`,
+  `exertion`, `sleep_loss`, `stress`, `other`.
+- `TriageStatus` (StrEnum): `asking`, `ready`, `escalated` (open), `confirmed`,
+  `cancelled`, `expired` (closed). `OPEN_STATUSES` lists the open ones.
+- `SymptomReport`: `report_id` [uuid], `astronaut_id`, `reported_at`, `text`
+  (1 to 1,000 characters), `channel` (`"text"` or `"voice"`, default text).
+- `SymptomFinding`: `signal` (a symptom `SignalType`, or `None` for a
+  complaint outside the 8 signals), `label`, `severity` (0–3 or `None`),
+  `negated`, `confidence` (0–1), `evidence` (words from the text; empty for
+  findings that came from an answer), `onset_hours`, `body_site`, `side`
+  (`"left"`, `"right"`, `"both"`, `"one_side"` or `None`). A signal, if set,
+  must be in category symptom.
+- `TriageQuestion`: `question_id` (Slug), `text` (at most 120 characters),
+  `answer_type` (`"yes_no"`, `"scale_0_3"`, `"choice"` or `"reading"`),
+  `choices`, `signal` and/or `feature`, `likelihoods` (pattern → answer →
+  probability), `red_flag_answers`, `category` (`SignalCategory`, for
+  consent), `screening` (bool).
+  - A **symptom question** has a `signal`, no `feature` and answer type
+    `scale_0_3`: its answer is that symptom's severity. Its `choices` default
+    to the signal's scale words from `get_spec` (none, mild, moderate, severe).
+  - A **feature question** has a `feature` (`one_side`, `recent_exertion`,
+    `short_sleep`, `high_stress`, `breathing_trouble` ...). If it also has a
+    `signal`, it is asked only when that symptom was reported (for a
+    screening question: the complaint that calls for it).
+  - Answer keys for `likelihoods` and `red_flag_answers`: `"yes"`/`"no"`,
+    `"0"`–`"3"`, or a choice. A pattern missing from `likelihoods` gets the
+    uninformative 1 / (number of answers). `reading` answers carry no likelihoods.
+  - `normalize(value)` turns an answer into its stored form (bool, 0–3,
+    choice, number) and raises `ValueError` for anything else; it accepts
+    `true`/`"yes"`, `2`/`"moderate"`, `"none"` and so on. `answer_key(value)`
+    gives the likelihood key.
+- `TriageAnswer`: `question_id`, `value` (bool, int, float, str, or `None`
+  when skipped), `answered_at`.
+- `PatternScore`: `pattern`, `label` (plain words, filled by the service from
+  `cards/patterns.jsonl`), `probability` (0–1), `reasons` (at most 3
+  `Contributor`s, each with `signal` or `event_id` set where one applies).
+- `TriageResult`: `session_id`, `astronaut_id`, `as_of`, `status`, `findings`,
+  `ranking` (probabilities sum to 1 ± 1e-6 when not empty), `next_question`,
+  `red_flags` (rule ids), `procedures` (`ActionCard`s), `errors`,
+  `model_version` (at most 64 characters, e.g. `lexicon-0.1+rules-0.1`).
+- `TriageSession`: `session_id`, `astronaut_id`, `started_at`, `updated_at`,
+  `as_of`, `reports`, `answers`, `result`, `status`, `confirmed_as_of`, and
+  `done` (the astronaut said "that's all").
+
+### Store (`orbit/core/store.py`, the M4 way)
+
+Table `triage_sessions(id TEXT PRIMARY KEY, astronaut_id TEXT NOT NULL,
+started_ts INTEGER NOT NULL, status TEXT NOT NULL, doc TEXT NOT NULL)` with an
+index on `(astronaut_id, started_ts)`. Methods: `save_session(session)` (same
+id replaces), `session(session_id) -> TriageSession | None`, and
+`sessions(astronaut_id, *, start=None, end=None)` on `started_at`, newest
+first. The table is in `counts()`. `CREATE TABLE IF NOT EXISTS`, so old
+databases gain the table.
+
+### Config (`[triage]` in `orbit.toml`; `orbit/core/config.py` does not change)
+
+`load_settings` ignores unknown top-level sections. `orbit/triage/config.py`
+(`load_triage_settings(settings) -> TriageSettings`) reads `[triage]` from
+`Settings.config_path` and resolves `_path` keys relative to that file, like
+`_resolve_paths`. Without a config file, or without `[triage]`, the built-in
+starters and small built-in libraries are used. Unknown keys are a `ConfigError`.
+
+```toml
+[triage]                      # M15
+session_timeout_minutes = 120
+patterns_path = "cards/patterns.jsonl"
+triage_cards_path = "cards/triage_cards.jsonl"
+red_flags_path = "cards/red_flags.jsonl"
+
+[triage.extractor]
+use = "lexicon"
+lexicon_path = "cards/symptom_lexicon.jsonl"
+
+[triage.reasoner]
+use = "rules"
+questions_path = "cards/questions.jsonl"
+max_questions = 5
+stop_probability = 0.8
+```
+
+### Hand-written libraries (JSONL, checked on load, illustrative, never clinical)
+
+- `cards/symptom_lexicon.jsonl`: phrases per symptom signal, severity words,
+  negation cues, scope breakers, body sites, sides, and words for complaints
+  outside the 8 signals. One record per line with a `kind`.
+- `cards/questions.jsonl`: `TriageQuestion` records. File order is the
+  rules reasoner's priority among bank questions.
+- `cards/patterns.jsonl`: `pattern`, `label` in plain words (for example
+  "Signs that fit shingles (VZV)"), and `card_ids`, which may name cards in
+  `action_cards.jsonl` or `triage_cards.jsonl`. `vzv_like` lists
+  `saliva-test` before `watch-patch`, so the worked example starts with the saliva test.
+- `cards/triage_cards.jsonl`: pattern cards and red-flag cards as
+  `ActionCard`s. Red-flag card ids start with `rf-`.
+- `cards/red_flags.jsonl`: the rules (`rule_id`, `label`, `phrases`,
+  `answers` (question id → red-flag answers), `card_id`).
+- **Never add triage cards to `cards/action_cards.jsonl`.** The `protocol`
+  engine would pick them on normal days, and `tests/test_actions.py` pins
+  day 89's cards to exactly `["saliva-test", "rest-watch"]`. Nothing in the
+  daily pipeline loads `triage_cards.jsonl`.
+- Card check on load: unique ids (also against `pipeline.actions.cards`),
+  orange and red cards set `escalate_to`, triggers within one signal
+  category, steps under 200 characters, no digit followed by "mg", every
+  pattern card id exists, every red-flag rule points to an `rf-` card, and
+  every `red_flag_answers` entry in the question bank is covered by a rule.
+- The built-in libraries (no paths) are self-contained: built-in patterns
+  name only built-in triage cards.
+
+### Patterns and their training labels
+
+`vzv_like`, `hsv1_like` and `ebv_like` come from the simulator's
+`viral_reactivation` (by virus); `respiratory` from `respiratory_infection`;
+`exertion` from `eva_exertion`; `sleep_loss` from `sleep_shift`; `stress` from
+`stress_load` (added in B24); `other` means no label, or a complaint outside
+the 8 signals. Pattern labels on screen are plain words and never a diagnosis.
+
+### Extractor `lexicon` (`orbit/modules/extractor.py`)
+
+`@register("extractor", "lexicon")`, `LexiconExtractor(lexicon_path=None)`. It handles:
+- phrases per signal ("tingly patch" → rash or tingling, "wiped out" →
+  fatigue), longest phrase first, several mentions of one signal merged into one finding;
+- severity words within 3 words before or after the phrase: "a bit" → 1,
+  "pretty" or "quite" → 2, "really bad" or "severe" → 3;
+- a negation window of 3 words before the phrase (no, not, without, never,
+  don't ...), stopped by punctuation and scope breakers ("but", "and");
+- durations, per sentence: "since last night" is about 12 h, "since this
+  morning" 4 h, "since yesterday" 24 h, "for N days" N × 24 h;
+- body sites and sides, given to the nearest finding in the same sentence;
+- complaints outside the 8 signals (nausea, dizziness, blurry vision,
+  congestion, back pain, cough, chest pain) as findings with signal `None`, never dropped.
+
+Helpers for B24's text model: `tokenize(text)`, `is_negated(tokens, index)`
+and `parse_duration(text) -> hours | None`.
+
+### Reasoner `rules` (`orbit/modules/reasoner.py`)
+
+`@register("reasoner", "rules")`,
+`RulesReasoner(questions_path=None, max_questions=5, stop_probability=0.8)`.
+
+- `rank`: hand-set likelihood ratios in the module, like `SYMPTOM_WEIGHTS` in `scorer.py`:
+  - `vzv_like`: rash or tingling.
+  - `hsv1_like`: mouth sores.
+  - `ebv_like`: swollen glands and sore throat.
+  - `respiratory`: fever or chills, sore throat, high CRP, a respiratory-rate anomaly.
+  - `exertion`: muscle aches, fatigue, an EVA in the last 3 days.
+  - `sleep_loss`: fatigue, headache, sleep anomalies.
+  - `stress`: headache, high stress, low mood.
+  - `other`: a complaint outside the 8 signals (and a higher prior, so it leads when nothing is known).
+  Viral DNA above 100 copies/mL counts per virus, read from the preview's
+  contributors (the scorer names it only above its detection limit). A
+  stronger symptom weighs more; a denied symptom ("none") weighs against the
+  patterns that expect it. Feature answers count through the bank's
+  likelihoods. Probabilities are normalised, and the top 3 factors of each
+  pattern are its reasons, as `Contributor`s (points = natural log of the factor).
+- `next_question`:
+  - Order: screening questions the complaint calls for, then a missing
+    severity for a mentioned symptom, then the bank's next question (file
+    order) that concerns the top 3 patterns.
+  - Never ask the same question twice. Skip what ORBIT knows: no spacewalk
+    question when `ctx.events` has an EVA in the last 3 days, no question
+    about a symptom the text already rated, no one-side question when the
+    side is known, no eye screening when the body site is known and not on
+    the face, no short-sleep question with a sleep anomaly, no stress
+    question when the check-in already shows high stress.
+  - Return `None` when the top probability reaches `stop_probability`,
+    after `max_questions`, or when no question is left. After
+    `answer(..., done=True)` the service does not ask.
+- The bank holds:
+  - a symptom question per symptom signal, with scale words from `get_spec`;
+  - "Is it on one side of your body only?";
+  - fever or chills, recent hard work or a spacewalk (feature
+    `recent_exertion`), short sleep and high stress questions;
+  - screening questions with red-flag answers ("Any trouble breathing?").
+  Each question carries illustrative per-pattern answer likelihoods.
+- New cards in `cards/triage_cards.jsonl`: `watch-patch` (yellow, `vzv_like`),
+  `mouth-care-early` (`hsv1_like`), `rest-fluids` (`ebv_like`),
+  `keep-distance` (`respiratory`), `recover-after-work` (`exertion`),
+  `describe-to-cmo` (`other`; escalates to the crew medical officer).
+  `sleep_loss` and `stress` reuse `recover-sleep` and `ease-stress`.
+
+### Red flags (`orbit/triage/red_flags.py`, not a slot)
+
+Fixed rules, checked on the raw text and on every answer before any model
+runs. Example phrases: "can't breathe", "chest pain", "fainted", "confused",
+"a rash near my eye". A negation cue (no, not, never, without, don't ...)
+denies a phrase only when it comes directly before it, in the same clause:
+"no chest pain", "without chest pain", "not short of breath", "I have no chest
+pain" (at most two filler words may sit between: "I don't have any trouble
+breathing"). Punctuation and dashes (— – - , ; . : ! ?) end a clause and stay
+boundaries when tokenising. A phrase that is itself negative ("can't
+breathe", "cannot breathe") is never denied by a cue before it, so "No, I
+can't breathe" and "No—I can't breathe" fire. Uncertainty is not denial:
+"not sure but chest pain", "not only chest pain" and "I don't think it's
+serious but I can't breathe" fire. When in doubt, fire.
+
+**The red-flag gate runs on every triage request before any validation; no
+error can drop a detected flag.** `screen_payload(raw, rules, questions)` in
+`orbit/triage/red_flags.py` collects every string in a request body (every
+key, every value, nested lists and objects, or the text of a body that is not
+JSON) and scans all of it; a structured answer to a bank question
+(`screen-breathing = yes`) counts too. The `/triage` POST endpoints read the
+raw body and hand it to the service (`start_raw`, `answer_raw`, `confirm_raw`,
+`cancel_raw`), which runs the gate first, then looks up the session, then
+validates; FastAPI does no body validation there. With a flag, the escalated
+session is saved first and every validation problem goes to `errors`
+(200 with the escalated `TriageResult`); `red_flag_at` is set either way:
+- a start always creates an escalated session; text over 1,000 characters is
+  cut to its first 1,000 with an error saying so;
+- an answer, confirm or cancel to an unknown, closed or other astronaut's
+  session starts a new escalated session instead of a 404 or 409;
+- an invalid confirm escalates instead of confirming (`day` is null); a valid
+  one records the flag, then confirms;
+- a cancel whose body carries a flag escalates instead of cancelling;
+- the flagged words are kept as reports in the session;
+- a `view` parameter on a flagged POST is not refused.
+Without a flag, the same problems give 422 (404, 409) as before. Every read-modify-write of a
+session holds one lock per session id, and saving merges red flags and
+reports with what is stored, so parallel requests cannot drop a red flag.
+Failing triage steps log only the step, the exception type and the session
+id, never the astronaut's words.
+
+A match sets the status to `escalated`, stops the questions and puts the
+rule's red-flag card first, whatever the score. A model may add a red flag
+(an answer in a question's `red_flag_answers`) but never remove one: red flags
+of a session only grow, and they stay after confirm or cancel. Recall on the
+hand-written test set `tests/fixtures/triage/red_flag_sentences.jsonl` must be
+100 %. That file is a first draft for a person to review.
+
+Red-flag cards have no triggers and say what to do now without naming the
+symptom, so the crew's shared view shows them in full.
+
+### Library and procedures (`orbit/triage/library.py`, not a slot)
+
+It loads and checks `patterns.jsonl` and `triage_cards.jsonl`, and provides
+`merge_procedures(red_flag_cards, pattern_cards, day_cards, level, max_cards=4)`:
+red-flag cards first, then the top pattern's cards, then the `protocol`
+engine's cards from the (re-)assessment. Drop duplicate card ids and keep at
+most 4. Never add a card above `level`, except red-flag cards. People write
+card text; models choose cards, never words. Before confirm, `level` and the
+day cards come from the preview.
+
+### Confirm
+
+1. Corrections (`{signal: severity}`, symptom signals only, 0–3) replace or
+   add findings. Each confirmed finding with a signal becomes
+   `Observation(signal, value=severity, source="checkin",
+   observation_id=f"{astronaut_id}-{signal.value}-{as_of:%Y%m%dT%H%M%S}",
+   note=f"triage {session_id}")`, the check-in's ID scheme. A negated symptom
+   is stored as 0; a symptom mentioned without a severity is stored as 1
+   (mild). Complaints outside the 8 signals write nothing and stay in the
+   session. Never copy the raw text into a note: notes travel with shared symptoms.
+2. Call `pipeline.assess(astronaut_id, as_of)` with `save=True`, so hooks and
+   auto-send run as today.
+3. Rank again with the re-assessment as the preview, merge the procedures and
+   re-save the same run:
+   `store.save_day(result.model_copy(update={"actions": tuple(merged)}))`. The
+   dashboard and crew view then show the chat's cards, and private ones are
+   hidden in the shared view as today.
+
+### API (`orbit/api/app.py` stays thin)
+
+| Method | Path | Body → returns |
+| --- | --- | --- |
+| POST | /api/crew/{id}/triage | {text, timestamp?} → TriageResult |
+| POST | /api/crew/{id}/triage/{session_id}/answer | {question_id, value}, {text} or {done: true} → TriageResult |
+| POST | /api/crew/{id}/triage/{session_id}/confirm | {corrections?: {signal: severity}} → {result, day} |
+| POST | /api/crew/{id}/triage/{session_id}/cancel | → TriageSession |
+| GET | /api/crew/{id}/triage/{session_id} | → TriageSession |
+| GET | /api/crew/{id}/triage?start=&end= | → TriageSession[], own view only |
+
+- `create_app(..., triage=None)` builds a service with the built-in starters
+  (and the app's `clock`) when none is given; `cmd_serve` and
+  `create_app_from_settings` pass one built from `[triage]`.
+- Errors: 404 for an unknown astronaut or session (also a session of another
+  astronaut), 409 for a closed session, 422 with the reason for a bad answer
+  (unless the request carries a red flag, see Red flags). Corrections take
+  only whole numbers 0–3: `true`, `"2"` and `2.0` get 422. Every `/triage`
+  endpoint answers a `view` query parameter with 400 "Triage sessions have
+  no shared view", except a POST whose body carries a red flag. The confirm
+  response's `day` is null when a flagged, invalid confirm escalated instead.
+- `OverviewRow` gains `red_flag_at`: the mission time (`as_of`) of the latest
+  session with a red flag started in the last 24 h of wall-clock time, with no
+  details. Sessions have no shared view.
+
+### CLI (`orbit/__main__.py`)
+
+- `python -m orbit triage AST-01 "<text>" --as-of 2027-04-02T10:30:00Z [--answer moderate --answer yes --answer none]`
+  runs a session in memory on the example data, like `demo`. It prints the
+  findings, each question with its answer, the patterns, the new level and
+  score, and the cards. It confirms at the end; questions left when the
+  answers run out end the session as "that's all".
+- `python -m orbit modules` also shows the active `[triage]` modules, with a
+  column wide enough for "extractor" and "reasoner".
+
+### Privacy and consent
+
+Raw text lives only in `triage_sessions`, never in an `EarthPacket` or a
+note. Pattern reasons are `Contributor`s with `signal` set, so the consent
+gate redacts them. Score, level and `red_flag_at` always reach the crew.
+Confirmed symptoms are in category symptom, so they are private by default.
+
+### Numbers measured on the code before B23 (test expectations)
+
+- 270 tests pass. AST-01 is yellow 27.7 at day 89 10:00 and orange 70.2 at day 90 10:00.
+- A confirmed chat at 2027-04-02T10:30:00Z (day 89) with rash or tingling 2,
+  fatigue 2 and fever or chills 0 re-scores AST-01 to yellow 44.7. The
+  `protocol` cards are `saliva-test`, then `rest-watch`. The 10:00 runs do not change.
+- The same chat at 2027-04-03T10:30:00Z (day 90) gives red 77.2.
+- The day-88 spacewalk (EVA event for AST-01, 2027-04-01) is in `ctx.events` on day 89.
+
+### Worked example (AST-01, day 89, 10:30)
+
+- Text: "Weird burning, tingly patch on my ribs since last night. Pretty wiped out too."
+- Findings: rash or tingling (no severity, body site ribs, onset about 12 h)
+  and fatigue 2. No red flag.
+- Questions, in order: how strong the burning or tingling is ("Moderate" →
+  2); "Is it on one side of your body only?" ("Yes"); "Any fever or chills?"
+  ("None" → 0). The spacewalk question is skipped (the EVA is known).
+  `vzv_like` leads after the one-side answer and passes 0.8 after the third
+  question, so the session is ready.
+- Confirm gives yellow 44.7. The procedures start with `saliva-test` and
+  include `watch-patch` and `rest-watch`.
+
+### Version 2 (B24): the models
+
+B24 adds learned modules beside the starters; `orbit.toml` switches only if
+the switch rules below pass and the team agrees.
+
+- **Simulator look-alikes** (`symptom_lookalikes`, `mild_illness_rate`, off
+  by default and drawing no random numbers when off): muscle aches and
+  fatigue after an EVA, fatigue and headache during a sleep shift, and a new
+  `stress_load` look-alike (stress, mood and headache, no vital change).
+- **Extractor `text_linear`** (`orbit/modules/extractor_learned.py`): logistic
+  regression per symptom on word and character n-grams plus a severity head,
+  trained on seeded templates and hand-written paraphrases; negation and
+  durations reuse the lexicon helpers.
+- **Reasoner `bayes`** (`orbit/modules/reasoner_bayes.py`): naive Bayes
+  trained on simulated episodes; next question by expected information gain
+  in bits (`min_gain_bits = 0.05`), keeping the screening-first,
+  severity-first and stop rules.
+- **Evaluation** (`orbit/evaluation/triage.py`): extractor F1, negation and
+  severity on human sentences; reasoner top-1, top-3, Brier score and
+  questions per session; red-flag recall; M9 numbers with chats.
+- **Switch rules:** `text_linear` beats `lexicon` on F1 and negation and
+  misses no red-flag phrase; `bayes` beats `rules` on top-1, top-3 and Brier
+  on seeds 101–105 with no more questions; M9 numbers no worse and the demo
+  story holds. The answer likelihoods are hand-set, so the evaluation
+  measures consistency, not medical truth.
+
+**Done when (B23):** every checkpoint in `tasks/B23-triage-v1.md` passes,
+the contracts pass for both slots, and `python -m orbit triage AST-01 ...` prints
+the worked example (yellow 44.7).
+
+---
+
 # Part 4: Build order and coordination
 
 | Module | Can start | Needs | Unblocks |
@@ -827,6 +1301,7 @@ categories show the neutral label. Show who each card escalates to.
 | M10 actions | now | — | — |
 | M11 / M12 / M14 frontend | now (API is live) | — | the demo |
 | M13 sync | now | — | — |
+| M15 symptom triage | after M10 (B19) | M8, M10, M13/M14 shared view (B15), auto-send (B18) | the chat check-in screen |
 
 **Shared files:**
 - `orbit/schema/` and `orbit/core/`: one change at a time, full test suite,

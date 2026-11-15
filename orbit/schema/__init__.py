@@ -50,6 +50,18 @@ from .models import (
     level_for_score,
 )
 from .signals import SIGNALS, SignalSpec, get_spec, signals_in
+from .triage import (
+    OPEN_STATUSES,
+    PatternScore,
+    SymptomFinding,
+    SymptomReport,
+    TriageAnswer,
+    TriagePattern,
+    TriageQuestion,
+    TriageResult,
+    TriageSession,
+    TriageStatus,
+)
 
 __all__ = [
     # enums
@@ -67,4 +79,7 @@ __all__ = [
     "to_dataframe", "from_dataframe",
     # scenario labels
     "ScenarioType", "ScenarioLabel", "ALERTING_SCENARIOS", "read_labels", "write_labels",
+    # symptom triage (M15)
+    "TriagePattern", "TriageStatus", "OPEN_STATUSES", "SymptomReport", "SymptomFinding",
+    "TriageQuestion", "TriageAnswer", "PatternScore", "TriageResult", "TriageSession",
 ]

@@ -239,3 +239,16 @@ for every task it merges, and `/task` reads the sections for the tasks it needs.
 - `orbit.toml` has a commented-out `[[sources]] use = "wearable_csv"` example.
 - `tests/test_live_demo.py` (B20) changed with the team's agreement: the test that expected `--from-csv` to be refused now imports a CSV into a temporary database. Before the fix it ran `seed` on the real `data/orbit.db` once and left a crew member AST-03 there (local, git-ignored; `python -m orbit reset` clears it).
 - IANA timezones need the `tzdata` package on Windows; pandas installs it.
+
+## B23 · Symptom triage v1: rules, end to end
+
+- Slots `extractor` and `reasoner` are in `SLOTS`, not `ANALYTICS_SLOTS`. Protocols in `orbit/core/interfaces.py`: `SymptomExtractor.extract(report, ctx) -> list[SymptomFinding]`; `TriageReasoner.rank(evidence, ctx) -> list[PatternScore]` and `next_question(evidence, ranking, ...)`. `TriageEvidence` (dataclass) carries findings and answers between them.
+- Starters: `lexicon` (`orbit/modules/extractor.py`) and `rules` (`orbit/modules/reasoner.py`). Lexicon helpers for B24: `tokenize`, `is_negated`, `parse_duration` in `extractor.py`.
+- Schema models live in `orbit/schema/triage.py`; `SCHEMA_VERSION` is now 1.1.0. Statuses: `asking`, `ready`, `escalated`, `confirmed`, `cancelled`, `expired`.
+- `orbit/triage/` is not a module package: `__init__.py` has no imports (NOTES B08). `library.py` (`TriageLibrary`, `check_cards`, `merge_procedures`), `red_flags.py` (`RedFlagRules.check_text/check_answer`, `screen_payload`), `config.py` (`load_triage_settings`), `service.py` (`TriageService.start/answer/confirm/cancel/session/sessions/red_flag_at`, plus `*_raw` variants the API uses).
+- Libraries: `cards/symptom_lexicon.jsonl`, `questions.jsonl` (likelihoods per pattern), `patterns.jsonl` (labels), `triage_cards.jsonl`, `red_flags.jsonl`. Triage card ids must not clash with `action_cards.jsonl`; the library check rejects duplicates, doses and mixed categories.
+- Nothing is stored until confirm. Confirm writes ordinary `checkin` observations and calls `pipeline.assess()`; response is `{result, day}`. The daily pipeline is unchanged (10:00 runs identical).
+- Red flags are screened on every string in a payload first: status `escalated`, red-flag card first, no question. `/api/overview` gets `red_flag_at` (last 24 h).
+- API: `POST /api/crew/{id}/triage`, `.../{session}/answer`, `.../confirm`, `.../cancel`; `GET .../triage` and `.../triage/{session}` (refused with `?view=shared`). Errors: unknown astronaut/session 404, closed session 409, bad answer 422.
+- CLI: `python -m orbit triage AST-01 "<text>" --as-of ... --answer ...`; the worked example in SPEC M15 gives yellow 44.7. `python -m orbit modules` lists the two new slots.
+- `[triage]` block in `orbit.toml`: B24 switches its `use` lines only after its switch rules pass. A failing reasoner is recorded in errors and leaves the re-assessment's cards.
