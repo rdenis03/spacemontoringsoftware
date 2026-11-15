@@ -124,6 +124,7 @@ orbit/
     config.py        orbit.toml loader
   modules/           one starter per slot; teams add their modules here
     sources.py       source: files, memory              (M3 extends)
+    space_weather.py source: donki                      (M5)
     baseline.py      baseline: rolling_median           (M6)
     detector.py      detector: robust_z                 (M7)
     scorer.py        scorer: rule_based                 (M8)
@@ -301,6 +302,10 @@ vitals shift on day 89, more on day 90; fatigue on day 89, fatigue + rash on
 day 90; saliva VZV 850 copies/mL on day 90. Events: spacewalk (AST-01, day 88),
 solar particle event (crew, day 89–90). One faulty AST-02 reading is stored
 with `quality="bad"`.
+Real NASA DONKI events (M5, `examples/donki_cache.json`) replay onto the
+same mission: a geomagnetic storm on day 72 (low, counted days 73–79) and a
+solar particle event on day 76 (moderate, days 76–83). They add at most 4
+points and leave the scores below unchanged.
 
 With the starter modules: AST-01 green on day 88, **yellow (27.7) on day 89**,
 **orange (70.2) on day 90**; AST-02 green throughout.
@@ -482,9 +487,28 @@ test in `tests/test_store.py`. Never let modules import the store.
 
 ## M5: Space weather feed (NASA DONKI)
 
-**Not planned for this version.** Its task (B12) was dropped. The design below
-stays for later; until then, solar events come from the simulator (M2) and the
-example data.
+**Status: built.** DONKI website: <https://ccmc.gsfc.nasa.gov/tools/DONKI/>; API via <https://api.nasa.gov/>.
+`orbit/modules/space_weather.py`, registered as `donki`,
+active in `orbit.toml` in `cache` mode with `examples/donki_cache.json` (real
+2025-10-16 to 2025-10-26, replayed from mission day 70). Where each NASA
+resource is used: `docs/NASA_RESOURCES.md`.
+
+**Found on live responses (2026-11-15), beyond the design below:**
+
+- One request covers **at most 60 days** (otherwise HTTP 400). `fetch` mode
+  splits longer windows.
+- DONKI lists **one SEP once per instrument** or energy channel, so one event
+  can be several SEP records minutes apart. Records whose `eventTime` lies
+  within 6 hours of a group's first record merge into one `ContextEvent` with
+  the earliest `sepID`; the description gives the record count.
+- **FLR is not checked against a live response**: the FLR endpoint answered
+  HTTP 404 for every date tried. The mapping follows the field names below,
+  behind a new option `include_flr` (default false).
+- SEP, GST and CME field names were confirmed as listed below.
+- Each description names the source and real date, e.g.
+  "NASA DONKI GST 2025-10-18T18:00Z, max Kp 6 (real event, replayed)".
+- Kp values come in thirds (6.67 = "7-") and round down before the storm
+  thresholds; a CME is `low` severity with no end time (not set by the design).
 
 **Owner files:** `orbit/modules/space_weather.py`, `tests/test_space_weather.py`,
 `tests/fixtures/donki/*.json` (recorded responses).
@@ -510,6 +534,7 @@ a live response before mapping**: FLR `flrID`, `beginTime`, `peakTime`,
 | `real_start`, `real_end` | none | real date range to fetch or replay |
 | `mission_start` | none | if set, shift real dates so `real_start` lands on this date: a simulated 2027 mission replays real solar history |
 | `include_cme` | false | CMEs alone are noisy; their effects show up as SEP/GST |
+| `include_flr` | false | flares; off because the FLR endpoint could not be checked live |
 
 **Mapping:** FLR → `solar_flare`, SEP → `solar_particle_event`, CME → `cme`,
 GST → `geomagnetic_storm`; `astronaut_id=None` (whole crew), `source="ground"`,

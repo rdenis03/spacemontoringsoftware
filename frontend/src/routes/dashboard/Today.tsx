@@ -5,7 +5,7 @@
  */
 import { useState } from "react";
 import { api } from "../../api/client";
-import type { ActionCard, Anomaly, Contributor, DayResult, RiskAssessment } from "../../api/types";
+import type { ActionCard, Anomaly, ContextEvent, Contributor, DayResult, RiskAssessment } from "../../api/types";
 import { Frame } from "../../components/Frame";
 import { LevelIcon } from "../../components/LevelIcon";
 import { LevelTag } from "../../components/LevelTag";
@@ -30,6 +30,11 @@ export default function Today({
   const history = useAsync((signal) => api.assessments(astronautId, signal), [astronautId, freshness], {
     enabled: Boolean(astronautId),
   });
+  // Optional: events explain where an event reason came from (e.g. NASA DONKI and its real date).
+  // Loaded on their own; if this fails, the reasons still show, just without that line.
+  const events = useAsync((signal) => api.events(astronautId, signal), [astronautId, freshness], {
+    enabled: Boolean(astronautId),
+  });
 
   if (status.error) return <LoadError error={status.error} retry={status.reload} what="assessment" />;
   if (!status.data) return <Loading what="today's status" />;
@@ -49,7 +54,12 @@ export default function Today({
   return (
     <div className="today">
       <StatusCard result={result} previous={previous} />
-      <Contributors contributors={assessment.contributors ?? []} anomalies={result.anomalies ?? []} score={assessment.score} />
+      <Contributors
+        contributors={assessment.contributors ?? []}
+        anomalies={result.anomalies ?? []}
+        events={events.data ?? []}
+        score={assessment.score}
+      />
       <div className="today__actions">
         <ActionsPanel key={`${result.astronaut_id}-${result.as_of}`} cards={result.actions ?? []} />
         {(result.errors?.length ?? 0) > 0 && <PartialNote errors={result.errors ?? []} />}
@@ -145,16 +155,19 @@ function StatusCard({ result, previous }: { result: DayResult; previous?: RiskAs
 function Contributors({
   contributors,
   anomalies,
+  events,
   score,
 }: {
   contributors: readonly Contributor[];
   anomalies: readonly Anomaly[];
+  events: readonly ContextEvent[];
   score: number;
 }) {
   const { spec, registry } = useRegistry();
   const total = contributors.reduce((sum, c) => sum + c.points, 0);
   const maxPoints = Math.max(...contributors.map((c) => c.points), 1);
   const bySignal = new Map(anomalies.map((a) => [a.signal, a]));
+  const byEventId = new Map(events.map((e) => [e.event_id, e]));
 
   return (
     <section className="contributors" aria-labelledby="why-heading">
@@ -178,7 +191,7 @@ function Contributors({
                   : s && s.category === "lab"
                     ? "Onboard lab result"
                     : c.event_id
-                      ? "Stress event"
+                      ? (byEventId.get(c.event_id)?.description ?? "Stress event")
                       : "";
             return (
               <li key={`${c.label}-${i}`} className="contrib">
