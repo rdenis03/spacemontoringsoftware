@@ -1,0 +1,164 @@
+/* Mission day and time: a quiet pill that opens a small panel. */
+
+.mtime {
+  position: relative;
+  display: inline-block;
+}
+
+.mtime__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--fast) var(--ease),
+    border-color var(--fast) var(--ease);
+}
+
+.mtime__pill:hover,
+.mtime__pill[aria-expanded="true"] {
+  color: var(--text);
+  border-color: var(--fill-strong);
+}
+
+.mtime__pill:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.mtime__dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.mtime__panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--card);
+  box-shadow:
+    0 0 0 1px var(--separator),
+    0 12px 32px rgb(0 0 0 / 0.14);
+  text-align: left;
+  animation: mtime-in 160ms var(--ease) both;
+}
+
+@keyframes mtime-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mtime__panel {
+    animation: none;
+  }
+}
+
+.mtime__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.mtime__label {
+  font-size: var(--text-secondary);
+  color: var(--text-2);
+}
+
+.mtime__stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--fill);
+}
+
+.mtime__step {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.mtime__step:hover:not(:disabled) {
+  background: var(--card);
+}
+
+.mtime__step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.mtime__day {
+  width: 3.2em;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.mtime__day::-webkit-inner-spin-button,
+.mtime__day::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.mtime__time {
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--fill);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+}
+
+.mtime__step:focus-visible,
+.mtime__day:focus-visible,
+.mtime__time:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.mtime__note {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--text-2);
+}
+
+.mtime__done {
+  justify-self: end;
+  min-height: 36px;
+}

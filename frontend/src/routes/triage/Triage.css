@@ -1,0 +1,571 @@
+/* The chat (M15), the home screen: a messaging layout with the composer pinned to the bottom. */
+
+.chat {
+  --bubble-radius: 20px;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  /* fill the screen between the top bar and the footer, so the empty state sits in the middle */
+  min-height: calc(100dvh - 200px);
+}
+
+/* ---- empty state: everything centred in the middle of the screen ---- */
+
+.chat-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6) 0;
+  text-align: center;
+}
+
+.chat-empty__mark {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--space-1);
+  border-radius: 50%;
+  background: var(--card);
+}
+
+.chat-empty__title {
+  margin: 0;
+  text-wrap: balance;
+}
+
+.chat-empty__compose {
+  width: 100%;
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  text-align: left;
+}
+
+.chat-empty__hint {
+  max-width: 46ch;
+  margin: 0;
+  color: var(--text-2);
+  text-wrap: balance;
+}
+
+/* ---- the conversation ---- */
+
+.thread {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.thread__stamp {
+  align-self: center;
+  margin-bottom: var(--space-2);
+  color: var(--text-2);
+}
+
+.bubble {
+  max-width: min(80%, 560px);
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: var(--bubble-radius);
+  font-size: var(--text-body);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  animation: bubble-in 200ms var(--ease) both;
+}
+
+/* the astronaut on the right, ORBIT on the left; both neutral (the accent is for actions) */
+.bubble--me {
+  align-self: flex-end;
+  background: var(--fill);
+  border-bottom-right-radius: 6px;
+}
+
+.bubble--orbit {
+  align-self: flex-start;
+  background: var(--card);
+  border-bottom-left-radius: 6px;
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble {
+    animation: none;
+  }
+}
+
+/* ---- the open question: a bubble with large answer buttons under it ---- */
+
+.thread__ask {
+  margin-top: var(--space-2);
+}
+
+.ask {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ask__answers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: var(--space-2);
+}
+
+.answer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 56px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--separator);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-body);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color var(--fast) var(--ease),
+    border-color var(--fast) var(--ease),
+    transform var(--fast) var(--ease);
+}
+
+.answer-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.answer-btn:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.answer-btn .severity-dots {
+  color: var(--text-2);
+}
+
+.answer-btn:hover:not(:disabled) {
+  border-color: var(--fill-strong);
+  background: var(--card-2);
+}
+
+.answer-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ask__reading {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.ask__reading .input {
+  max-width: 200px;
+}
+
+.ask__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: calc(-1 * var(--space-2));
+}
+
+/* ---- the composer: centred before the first message, then pinned to the bottom ---- */
+
+.composer {
+  display: grid;
+  gap: 4px;
+}
+
+.composer--pinned {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  margin-top: auto;
+  padding: var(--space-4) 0 var(--space-4);
+  background: linear-gradient(to bottom, transparent, var(--bg) 22px);
+}
+
+.composer__box {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: 8px 8px 8px 20px;
+  border: 1px solid var(--separator);
+  border-radius: 28px;
+  background: var(--card);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.06);
+  transition:
+    border-color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
+}
+
+.composer__box:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--separator));
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent),
+    0 8px 24px rgb(0 0 0 / 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  .composer__box {
+    box-shadow: none;
+  }
+}
+
+.composer__text {
+  flex: 1;
+  min-height: 44px;
+  max-height: 200px;
+  padding: 11px 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-body);
+  line-height: 1.4;
+  field-sizing: content;
+}
+
+.composer__text::placeholder {
+  color: var(--text-3);
+}
+
+/* the primary action: a compact accent pill with an arrow */
+.composer__send {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px 0 18px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  font: inherit;
+  font-size: var(--text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--fast) var(--ease),
+    opacity var(--fast) var(--ease);
+}
+
+.composer__send:hover:not(:disabled) {
+  background: var(--accent-fill-hover);
+}
+
+.composer__send:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.composer__send:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.composer__count {
+  justify-self: end;
+  padding-right: var(--space-4);
+  color: var(--text-2);
+}
+
+/* the tab bar sits at the bottom on narrow screens: keep the composer above it */
+@media (max-width: 760px) {
+  .composer--pinned {
+    bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ---- red flag: replaces the conversation ---- */
+
+.redflag {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-card);
+  background: var(--card);
+  box-shadow: inset 4px 0 0 var(--level-red);
+}
+
+.redflag__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.redflag__words {
+  display: grid;
+  gap: 2px;
+}
+
+.redflag__level {
+  font-size: var(--text-secondary);
+  font-weight: 600;
+}
+
+.redflag__steps {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.redflag__tell strong {
+  font-weight: 600;
+}
+
+/* ---- the report: ORBIT's last message ---- */
+
+.thread__report {
+  display: grid;
+}
+
+.report {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  border-radius: var(--radius-card);
+  background: var(--card);
+  animation: bubble-in 200ms var(--ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .report {
+    animation: none;
+  }
+}
+
+.report__head {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.report__head p {
+  margin: 0;
+}
+
+.report__part {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.report__part > h3 {
+  margin: 0;
+}
+
+.report__not {
+  font-weight: 400;
+  color: var(--text-2);
+}
+
+.report__sub {
+  margin: 0;
+  font-size: var(--text-secondary);
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.report__list {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.report__officer {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.report__officer .caption {
+  margin: 0;
+  color: var(--text-2);
+}
+
+/* one symptom: the segmented control, then its notes and plain-text actions */
+.symptom {
+  display: grid;
+  gap: 2px;
+}
+
+.symptom .scale {
+  padding: var(--space-1) 0;
+}
+
+.symptom__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-3);
+  min-height: 0;
+}
+
+.symptom__foot .caption {
+  color: var(--text-2);
+}
+
+/* an edit is not saved yet: say so in words, not colour alone */
+.symptom__edited {
+  color: var(--accent) !important;
+  font-weight: 500;
+}
+
+.symptom__actions {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.symptom__btn {
+  min-height: 36px;
+  font-size: var(--text-secondary);
+}
+
+.report__answers {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.report__answers div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.report__answers dt {
+  color: var(--text-2);
+}
+
+.report__answers dd {
+  margin: 0;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.report__part > .caption {
+  margin: 0;
+  color: var(--text-2);
+}
+
+.report__patterns {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.report__patterns li {
+  display: grid;
+  gap: 2px;
+}
+
+.report__word {
+  font-weight: 600;
+}
+
+.report__reasons {
+  font-size: var(--text-secondary);
+}
+
+.report__todo {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.report__steps {
+  margin: var(--space-2) 0 var(--space-2);
+  padding-left: var(--space-5);
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-secondary);
+}
+
+.report__foot {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.report__foot > .caption {
+  margin: 0;
+  color: var(--text-2);
+}
+
+.report__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ---- the saved result: same card, read-only ---- */
+
+.saved-level {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+.saved-level__words {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+}
+
+.saved-level__word {
+  font-size: var(--text-title);
+  font-weight: 700;
+}
+
+.saved-level__score {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.saved-level__score .figure {
+  font-size: 1.75rem;
+}
+
+.report--saved .actions {
+  margin: 0;
+}
+
+/* ---- closed chats and restore errors ---- */
+
+.closed {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.closed__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

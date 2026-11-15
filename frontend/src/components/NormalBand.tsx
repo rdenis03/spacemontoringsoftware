@@ -1,7 +1,7 @@
 import type { SignalSpec } from "../api/types";
 import { formatNumber, formatValue, withUnit } from "../lib/format";
-import { levelColor } from "../lib/levels";
-import { zoneForReading } from "../lib/zones";
+import { NO_NORMAL, ZONE_COPY, zoneForReading } from "../lib/zones";
+import { LevelIcon } from "./LevelIcon";
 import "./NormalBand.css";
 
 interface Props {
@@ -13,7 +13,8 @@ interface Props {
 
 /**
  * ORBIT's signature element: your personal normal as a band (center ±
- * spread) and today's reading as a bar in its state colour.
+ * spread) and today's reading as a circle in its state's colour (its word is the
+ * marker's tooltip and accessible name).
  */
 export function NormalBand({ value, center, spread, spec }: Props) {
   const reach = Math.max(spread * 3, Math.abs(value - center) * 1.25, 1e-9);
@@ -31,10 +32,9 @@ export function NormalBand({ value, center, spread, spec }: Props) {
       <span className="normal-band__track" />
       <span className="normal-band__band" style={{ left: x(center - spread), width: `${(spread / reach) * 50}%` }} />
       <span className="normal-band__center" style={{ left: x(center) }} />
-      <span
-        className="normal-band__dot"
-        style={{ left: x(value), background: zone ? levelColor(zone) : "var(--color-neutral-700)" }}
-      />
+      <span className="normal-band__dot" style={{ left: x(value) }}>
+        <LevelIcon level={zone ?? "none"} size={14} label={zone ? ZONE_COPY[zone].long : NO_NORMAL} />
+      </span>
     </div>
   );
 }

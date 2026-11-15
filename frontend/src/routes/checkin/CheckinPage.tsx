@@ -9,17 +9,18 @@
  * after. If the request fails the form keeps every answer and offers a
  * retry; a 422 lists what is wrong.
  */
-import { useId, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api, errorMessages, isNetworkError } from "../../api/client";
 import type { CheckIn, DayResult, SignalSpec } from "../../api/types";
-import { Corners, Frame } from "../../components/Frame";
+import { Frame } from "../../components/Frame";
 import { LevelIcon } from "../../components/LevelIcon";
+import { MissionTimePicker } from "../../components/MissionTimePicker";
+import { ScaleQuestion } from "../../components/ScaleQuestion";
 import { PartialNote } from "../../components/StateMessage";
 import { formatMissionTime, formatNumber, missionDayToIso } from "../../lib/format";
-import { levelCopy, levelInk, levelTint } from "../../lib/levels";
+import { levelCopy, levelInk } from "../../lib/levels";
 import type { AsyncState } from "../../lib/useAsync";
-import { zoneForReading } from "../../lib/zones";
 import { useRegistry } from "../../state/registry-context";
 import { ActionsPanel } from "../dashboard/Today";
 import "../dashboard/Dashboard.css";
@@ -38,13 +39,13 @@ export default function CheckinPage({ astronautId, status }: { astronautId: stri
 
   return (
     <div className="checkin enter">
-      <div className="checkin__head">
-        <span className="identity__meta">
-          {astronaut?.callsign ?? astronautId} · {astronautId}
-        </span>
-        <h1 className="identity__name">Daily check-in</h1>
-        <p className="checkin__lead">Tap only what changed. Everything starts at “none”.</p>
-      </div>
+      <header className="screen-head">
+        <h1 className="large-title">Quick check-in</h1>
+        <p className="screen-head__lead">
+          Tap only what changed. Everything starts at “none”.{" "}
+          <Link to={{ pathname: "/", search: `?astronaut=${encodeURIComponent(astronautId)}` }}>Describe it in the chat instead</Link>
+        </p>
+      </header>
       {/* key: a new astronaut gets a fresh form */}
       <CheckinForm
         key={astronautId}
@@ -124,15 +125,15 @@ function CheckinForm({
     <form className="checkin__layout" onSubmit={submit} noValidate>
       <div className="checkin__questions">
         <Frame as="fieldset" className="checkin__group">
-          <legend className="section-label">Symptoms</legend>
+          <legend className="checkin__legend">Symptoms</legend>
           {symptoms.map((s) => (
             <ScaleQuestion key={s.signal} spec={s} value={answers[s.signal] ?? s.plausible_min} onChange={(v) => set(s.signal, v)} />
           ))}
         </Frame>
 
         <Frame as="fieldset" className="checkin__group">
-          <legend className="section-label">
-            How you feel <span className="checkin__optional">optional</span>
+          <legend className="checkin__legend">
+            How you feel <span className="checkin__optional">Optional</span>
           </legend>
           {wellbeing.map((s) => (
             <ScaleQuestion key={s.signal} spec={s} value={answers[s.signal]} onChange={(v) => set(s.signal, v)} optional />
@@ -155,103 +156,31 @@ function CheckinForm({
       </div>
 
       <Frame as="aside" className="review" aria-labelledby="review-heading">
-        <span id="review-heading" className="kicker">
-          Review &amp; save
-        </span>
+        <h2 id="review-heading" className="headline">
+          Review and save
+        </h2>
         <div className="review__count" aria-live="polite">
-          <span className="figure review__figure">{String(reported.length).padStart(2, "0")}</span>
+          <span className="figure review__figure">{reported.length}</span>
           <span className="secondary">
             {reported.length === 0
               ? "No symptoms reported."
               : `symptom${reported.length === 1 ? "" : "s"} reported: ${reported.map((s) => s.label.toLowerCase()).join(", ")}.`}
           </span>
         </div>
-        <div className="review__when">
-          <label className="field">
-            <span className="field__label">Mission day</span>
-            <input
-              className="input data"
-              type="number"
-              min={1}
-              value={missionDayValue}
-              onChange={(e) => setDay(Math.max(1, Number(e.target.value) || 1))}
-            />
-          </label>
-          <label className="field">
-            <span className="field__label">Time (UTC)</span>
-            <input className="input" type="time" value={time} onChange={(e) => setTime(e.target.value || DEFAULT_TIME)} />
-          </label>
-        </div>
-        <p className="review__stamp">
-          {timestamp ? (
-            <>
-              Stamped with mission time: <span className="data">{formatMissionTime(timestamp)}</span>. The demo mission runs in 2027.
-            </>
-          ) : (
-            "The check-in will be stamped with the current time."
-          )}
-        </p>
+        {timestamp ? (
+          <div className="review__when">
+            <span className="caption">Stamped with mission time</span>
+            <MissionTimePicker day={missionDayValue} time={time} onDay={setDay} onTime={setTime} defaultTime={DEFAULT_TIME} />
+          </div>
+        ) : (
+          <p className="review__stamp">The check-in will be stamped with the current time.</p>
+        )}
         {error !== null && <SubmitError error={error} onRetry={() => void submit()} />}
-        <button type="submit" className="btn btn-primary blueprint review__save" disabled={sending}>
-          <Corners />
+        <button type="submit" className="btn btn-primary review__save" disabled={sending}>
           {sending ? "Saving check-in…" : "Save check-in"}
         </button>
       </Frame>
     </form>
-  );
-}
-
-/** One question on a word scale: a joined row of radio buttons, each with its state shape. */
-function ScaleQuestion({
-  spec,
-  value,
-  onChange,
-  optional = false,
-}: {
-  spec: SignalSpec;
-  value: number | null | undefined;
-  onChange: (value: number | null) => void;
-  optional?: boolean;
-}) {
-  const name = useId();
-  const words = spec.scale_labels ?? [];
-  return (
-    <div className="scale" role="radiogroup" aria-labelledby={`${name}-label`} aria-describedby={`${name}-desc`}>
-      <div className="scale__text">
-        <span id={`${name}-label`} className="scale__label">
-          {spec.label}
-        </span>
-        <span id={`${name}-desc`} className="scale__desc">
-          {spec.description}
-        </span>
-      </div>
-      <div className="scale__controls">
-        <div className="scale__options">
-          {words.map((word, i) => {
-            const optionValue = spec.plausible_min + i;
-            const zone = zoneForReading(optionValue, spec, undefined) ?? "green";
-            const checked = value === optionValue;
-            return (
-              <label
-                key={word}
-                className="scale__option"
-                data-checked={checked || undefined}
-                style={checked ? { background: levelTint(zone, 22), boxShadow: `inset 0 -2px 0 ${levelInk(zone)}` } : undefined}
-              >
-                <input type="radio" name={name} value={optionValue} checked={checked} onChange={() => onChange(optionValue)} />
-                <LevelIcon level={zone} size={11} />
-                <span>{word.charAt(0).toUpperCase() + word.slice(1)}</span>
-              </label>
-            );
-          })}
-        </div>
-        {optional && value !== null && value !== undefined && (
-          <button type="button" className="btn btn-ghost" onClick={() => onChange(null)}>
-            Clear
-          </button>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -274,17 +203,24 @@ function SubmitError({ error, onRetry }: { error: unknown; onRetry: () => void }
   );
 }
 
-/** What the check-in changed: new level, score before → after, top three reasons, action cards. */
-function CheckinResult({
+/**
+ * What the check-in changed: new level, score before → after, top three reasons, action cards.
+ * The chat (M15) shows its confirmed result with this too, with its own button label.
+ */
+export function CheckinResult({
   result,
   before,
   stamp,
   onEdit,
+  editLabel = "Change answers",
+  savedWhat = "Check-in",
 }: {
   result: DayResult;
   before: number | null;
   stamp: string;
   onEdit: () => void;
+  editLabel?: string;
+  savedWhat?: string;
 }) {
   const assessment = result.assessment;
   const level = assessment?.level ?? "green";
@@ -292,16 +228,17 @@ function CheckinResult({
   return (
     <div className="checkin__result">
       <div className="saved" role="status">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M20 6 9 17l-5-5" />
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="m8 12.5 2.7 2.7L16 10" />
         </svg>
-        <span className="saved__text">Check-in saved {stamp}. Here is your updated status.</span>
+        <span className="saved__text">{savedWhat} saved {stamp}. Here is your updated status.</span>
         <span className="saved__actions">
-          <Link className="btn btn-primary" to={{ pathname: "/", search: `?astronaut=${encodeURIComponent(result.astronaut_id)}` }}>
-            Open dashboard
+          <Link className="btn btn-primary" to={{ pathname: "/today", search: `?astronaut=${encodeURIComponent(result.astronaut_id)}` }}>
+            Open Today
           </Link>
           <button type="button" className="btn btn-secondary" onClick={onEdit}>
-            Change answers
+            {editLabel}
           </button>
         </span>
       </div>
@@ -320,12 +257,12 @@ function CheckinResult({
                 </div>
               </div>
               <div className="after__score">
-                <span className="kicker">Score</span>
+                <span className="caption">Score</span>
                 <span className="figure after__figure">
                   {before !== null ? `${formatNumber(before, 0)} → ` : ""}
                   {formatNumber(assessment.score, 0)}
                 </span>
-                <span className="secondary">{before !== null ? "Before → after this check-in" : "After this check-in"}</span>
+                <span className="secondary">{before !== null ? `Before → after this ${savedWhat.toLowerCase()}` : `After this ${savedWhat.toLowerCase()}`}</span>
               </div>
             </Frame>
           ) : (
@@ -336,12 +273,12 @@ function CheckinResult({
               Top reasons
             </h2>
             {reasons.length === 0 ? (
-              <p className="secondary">Nothing raised your score.</p>
+              <p className="card empty-card secondary">Nothing raised your score.</p>
             ) : (
-              <ol className="top-reasons__list">
+              <ol className="group numbered top-reasons__list">
                 {reasons.map((c, i) => (
                   <li key={`${c.label}-${i}`}>
-                    <span className="numbered__n data">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="numbered__n data">{i + 1}</span>
                     <span className="top-reasons__label">{c.label}</span>
                     <span className="secondary data">{formatNumber(c.points, 1)} pts</span>
                   </li>

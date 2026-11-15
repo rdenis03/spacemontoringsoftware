@@ -699,8 +699,10 @@ propose it, do not build it alone.
 
 ## Frontend (shared rules for M11, M12, M14)
 
-**Location:** `frontend/`, one app with routes `/` (dashboard, M12),
-`/checkin` (M11), `/crew` (M14). **Stack:** React + TypeScript + Vite; charts
+**Location:** `frontend/`, one app with routes `/` (chat check-in, M15; the
+home screen), `/today` (dashboard, M12), `/checkin` (quick form, M11),
+`/crew` (M14), `/earth` (M13); `/checkin/chat` redirects to `/` with its
+query. **Stack:** React + TypeScript + Vite; charts
 with a bundled library (for example Recharts). If the team picked Streamlit
 instead, use `ui/` and still call the HTTP API, never the store.
 

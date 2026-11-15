@@ -22,6 +22,7 @@ import type { Anomaly, Baseline, ContextEvent, DayResult, Observation, SignalSpe
 import { Frame } from "../../components/Frame";
 import { LevelIcon } from "../../components/LevelIcon";
 import { LevelDot } from "../../components/LevelShape";
+import { SeverityDots } from "../../components/SeverityDots";
 import { Sparkline } from "../../components/Sparkline";
 import { LoadError, Loading } from "../../components/StateMessage";
 import { dayTickLabel, dayTicks, ms, paddedDomain } from "../../lib/chart";
@@ -37,6 +38,7 @@ import {
 import { levelInk } from "../../lib/levels";
 import { useAsync } from "../../lib/useAsync";
 import { useTokens } from "../../lib/useTokens";
+import { severitySteps } from "../../lib/severity";
 import { NO_NORMAL, ZONE_COPY, ZONE_STEPS, ZONES, type Zone, zoneForReading, zoneRanges } from "../../lib/zones";
 import { useRegistry } from "../../state/registry-context";
 
@@ -176,16 +178,23 @@ function SensorGroups({
         if (signals.length === 0) return null;
         return (
           <div key={category} className="sensor-group">
-            <h3 className="sensor-group__title">{categoryName(category)}</h3>
-            <ul>
+            <h3 className="group__title">{categoryName(category)}</h3>
+            <ul className="group">
               {signals.map((spec) => {
                 const points = series.get(spec.signal) ?? [];
                 const reading = points[points.length - 1];
                 const baseline = baselineFor.get(spec.signal);
-                const zone = reading ? zoneForReading(reading.value, spec, baseline) : null;
-                const state = zone ? ZONE_COPY[zone].short : reading ? NO_NORMAL : "No recent reading";
-                const when = reading && missionStart ? `day ${missionDay(reading.timestamp, missionStart)}` : "";
                 const ordinal = spec.kind === "ordinal";
+                const zone = reading ? zoneForReading(reading.value, spec, baseline) : null;
+                // Ordinal: the scale word is the state, with neutral severity dots.
+                const state = !reading
+                  ? "No recent reading"
+                  : ordinal
+                    ? capitalize(formatValue(reading.value, spec))
+                    : zone
+                      ? ZONE_COPY[zone].short
+                      : NO_NORMAL;
+                const when = reading && missionStart ? `day ${missionDay(reading.timestamp, missionStart)}` : "";
                 return (
                   <li key={spec.signal}>
                     <button
@@ -195,12 +204,18 @@ function SensorGroups({
                       onClick={() => onSelect(spec.signal)}
                       aria-label={`${spec.label}: ${reading ? formatValue(reading.value, spec) : "no recent reading"}, ${state}${when ? `, ${when}` : ""}. Show trend.`}
                     >
-                      <LevelIcon level={zone ?? "none"} size={12} />
+                      {ordinal && reading ? (
+                        <span className="sensor-row__dots">
+                          <SeverityDots steps={severitySteps(reading.value, spec)} size={6} />
+                        </span>
+                      ) : (
+                        <LevelIcon level={zone ?? "none"} size={12} />
+                      )}
                       <span className="sensor-row__text">
                         <span className="sensor-row__label">{spec.label}</span>
                         <span className="sensor-row__line">
                           <span className="sensor-row__value data">{reading ? formatValue(reading.value, spec) : "—"}</span>
-                          <span className="sensor-row__state" style={{ color: zone ? levelInk(zone) : "var(--color-neutral-700)" }}>
+                          <span className="sensor-row__state" style={{ color: zone ? levelInk(zone) : "var(--text-2)" }}>
                             {state}
                           </span>
                         </span>
@@ -339,24 +354,9 @@ function TrendChart({
       </h2>
       <p className="trend__desc">{spec.description}</p>
 
-      <figure className="trend__figure" role="img" aria-label={`Line chart of ${spec.label} over time on coloured zones. ${summary}`}>
+      <figure className="trend__figure" role="img" aria-label={`Line chart of ${spec.label} over time${ordinal ? "" : " on coloured zones"}. ${summary}`}>
         <ResponsiveContainer width="100%" height={340}>
           <ComposedChart data={rows} margin={{ top: 20, right: 4, bottom: 4, left: 4 }}>
-            {ordinal &&
-              yTicks!.map((v) => {
-                const zone = zoneForReading(v, spec, undefined) ?? "green";
-                return (
-                  <ReferenceArea
-                    key={v}
-                    y1={v - 0.5}
-                    y2={v + 0.5}
-                    fill={tokens.level[zone]}
-                    fillOpacity={0.14}
-                    stroke="none"
-                    ifOverflow="hidden"
-                  />
-                );
-              })}
             {zoneKeys.map((z) => (
               <Area
                 key={z.key}
@@ -365,13 +365,13 @@ function TrendChart({
                 connectNulls
                 isAnimationActive={false}
                 fill={tokens.level[z.zone]}
-                fillOpacity={z.zone === "red" ? 0.14 : 0.16}
+                fillOpacity={0.1}
                 stroke="none"
                 activeDot={false}
                 tooltipType="none"
               />
             ))}
-            <CartesianGrid stroke={tokens.n400} strokeDasharray="2 4" vertical={false} />
+            <CartesianGrid stroke={tokens.separator} strokeOpacity={0.6} vertical={false} />
             <XAxis
               dataKey="t"
               type="number"
@@ -379,9 +379,9 @@ function TrendChart({
               domain={[tMin, tMax]}
               ticks={ticks}
               tickFormatter={dayLabel}
-              stroke={tokens.text}
-              tickLine={{ stroke: tokens.text }}
-              tick={{ fill: tokens.n700, fontSize: 13 }}
+              stroke={tokens.separator}
+              tickLine={false}
+              tick={{ fill: tokens.text2, fontSize: 12 }}
             />
             <YAxis
               orientation="right"
@@ -390,7 +390,7 @@ function TrendChart({
               tickFormatter={yLabel}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: tokens.n700, fontSize: 13 }}
+              tick={{ fill: tokens.text2, fontSize: 12 }}
               width={ordinal ? 84 : 52}
               allowDataOverflow
               allowDecimals={!ordinal}
@@ -403,11 +403,10 @@ function TrendChart({
                   key={e.event_id ?? e.start}
                   x1={Math.max(start, tMin)}
                   x2={Math.min(end, tMax)}
-                  fill={tokens.n600}
-                  fillOpacity={0.14}
-                  stroke={tokens.n500}
-                  strokeDasharray="3 3"
-                  label={{ value: eventName(e.event_type), position: "insideBottomLeft", fill: tokens.n800, fontSize: 12 }}
+                  fill={tokens.text3}
+                  fillOpacity={0.12}
+                  stroke="none"
+                  label={{ value: eventName(e.event_type), position: "insideBottomLeft", fill: tokens.text2, fontSize: 12 }}
                 />
               );
             })}
@@ -419,8 +418,8 @@ function TrendChart({
                 isAnimationActive={false}
                 dot={false}
                 activeDot={false}
-                stroke={tokens.accent700}
-                strokeDasharray="5 4"
+                stroke={tokens.text3}
+                strokeDasharray="4 4"
                 strokeWidth={1}
                 tooltipType="none"
               />
@@ -430,25 +429,44 @@ function TrendChart({
               type={ordinal ? "stepAfter" : "linear"}
               connectNulls
               isAnimationActive={false}
-              stroke={tokens.text}
-              strokeWidth={2}
+              stroke={tokens.accent}
+              strokeWidth={1.75}
               dot={(props: { cx?: number; cy?: number; payload?: Row }) => {
                 const row = props.payload;
                 const zone = row?.value !== undefined ? zoneOf(row.t, row.value) : null;
+                if (ordinal && row?.value !== undefined && props.cx !== undefined && props.cy !== undefined) {
+                  const word = capitalize(formatValue(row.value, spec));
+                  return (
+                    <circle
+                      key={`${row.t}`}
+                      cx={props.cx}
+                      cy={props.cy}
+                      r={observations.length > 20 ? 3.5 : 4.5}
+                      fill={tokens.text2}
+                      stroke={tokens.card}
+                      strokeWidth={1.5}
+                      role="img"
+                      aria-label={word}
+                    >
+                      <title>{word}</title>
+                    </circle>
+                  );
+                }
                 return (
                   <LevelDot
                     key={`${row?.t}`}
                     cx={props.cx}
                     cy={props.cy}
                     level={row?.value !== undefined ? zone : null}
+                    label={zone ? ZONE_COPY[zone].long : undefined}
                     color={zone ? tokens.level[zone] : undefined}
-                    stroke={tokens.bg}
-                    neutral={tokens.text}
-                    r={observations.length > 20 ? 4.5 : 6}
+                    stroke={tokens.card}
+                    neutral={tokens.text2}
+                    r={observations.length > 20 ? 3.5 : 5}
                   />
                 );
               }}
-              activeDot={{ r: 6, fill: tokens.text, stroke: tokens.bg }}
+              activeDot={{ r: 5, fill: tokens.accent, stroke: tokens.card }}
               name={spec.label}
             />
             {anomalies.map((a) => (
@@ -456,16 +474,16 @@ function TrendChart({
                 key={a.detected_at}
                 x={ms(a.detected_at)}
                 y={a.value}
-                r={13}
+                r={12}
                 fill="none"
                 stroke={tokens.text}
-                strokeWidth={2}
-                label={{ value: "Flagged today", position: "top", fill: tokens.text, fontSize: 13 }}
+                strokeWidth={1.5}
+                label={{ value: "Flagged today", position: "top", fill: tokens.text, fontSize: 12 }}
               />
             ))}
             <Tooltip
               content={<TrendTooltip spec={spec} missionStart={missionStart} zoneOf={zoneOf} baselines={sortedBaselines} />}
-              cursor={{ stroke: tokens.n500, strokeWidth: 1 }}
+              cursor={{ stroke: tokens.separator, strokeWidth: 1 }}
             />
           </ComposedChart>
         </ResponsiveContainer>
@@ -481,14 +499,11 @@ function TrendChart({
           </li>
         )}
         {ordinal
-          ? (spec.scale_labels ?? []).map((word, i) => {
-              const zone = zoneForReading(spec.plausible_min + i, spec, undefined) ?? "green";
-              return (
-                <li key={word}>
-                  <LevelIcon level={zone} size={11} /> {word}
-                </li>
-              );
-            })
+          ? (spec.scale_labels ?? []).map((word, i) => (
+              <li key={word}>
+                <SeverityDots steps={severitySteps(spec.plausible_min + i, spec)} size={6} /> {capitalize(word)}
+              </li>
+            ))
           : latestBaseline
             ? ZONES.map((zone, i) => (
                 <li key={zone}>
@@ -509,6 +524,11 @@ function TrendChart({
             <span className="legend__ring" /> Flagged today
           </li>
         )}
+        <li className="legend__note">
+          {ordinal
+            ? "Dots count the steps from none; level colours are kept for alert levels."
+            : "A point's colour is how far that reading is from your normal."}
+        </li>
       </ul>
       {!ordinal && latestBaseline && (
         <p className="trend__note">
@@ -587,9 +607,15 @@ function TrendTooltip({
         {formatMissionTime(new Date(t).toISOString())}
       </p>
       <p className="chart-tooltip__value">{formatValue(row.value, spec)}</p>
-      <p className="chart-tooltip__zone" style={{ color: zone ? levelInk(zone) : undefined }}>
-        <LevelIcon level={zone ?? "none"} size={10} /> {zone ? ZONE_COPY[zone].long : NO_NORMAL}
-      </p>
+      {spec.kind === "ordinal" ? (
+        <p className="chart-tooltip__zone">
+          <SeverityDots steps={severitySteps(row.value, spec)} size={6} /> {capitalize(formatValue(row.value, spec))}
+        </p>
+      ) : (
+        <p className="chart-tooltip__zone" style={{ color: zone ? levelInk(zone) : undefined }}>
+          <LevelIcon level={zone ?? "none"} size={10} /> {zone ? ZONE_COPY[zone].long : NO_NORMAL}
+        </p>
+      )}
       {base && spec.kind !== "ordinal" && (
         <p className="secondary">
           Normal {formatNumber(base.center - base.spread)}–{withUnit(formatNumber(base.center + base.spread), spec)}
@@ -632,9 +658,15 @@ function ReadingsTable({
               <td>{formatMissionTime(o.timestamp)}</td>
               <td>{formatValue(o.value, spec)}</td>
               <td>
-                <span className="table-zone" style={{ color: zone ? levelInk(zone) : undefined }}>
-                  <LevelIcon level={zone ?? "none"} size={10} /> {zone ? ZONE_COPY[zone].short : NO_NORMAL}
-                </span>
+                {spec.kind === "ordinal" ? (
+                  <span className="table-zone">
+                    <SeverityDots steps={severitySteps(o.value, spec)} size={6} /> {capitalize(formatValue(o.value, spec))}
+                  </span>
+                ) : (
+                  <span className="table-zone" style={{ color: zone ? levelInk(zone) : undefined }}>
+                    <LevelIcon level={zone ?? "none"} size={10} /> {zone ? ZONE_COPY[zone].short : NO_NORMAL}
+                  </span>
+                )}
               </td>
               <td className="secondary">
                 {base && spec.kind !== "ordinal"
@@ -647,4 +679,8 @@ function ReadingsTable({
       </tbody>
     </table>
   );
+}
+
+function capitalize(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
 }

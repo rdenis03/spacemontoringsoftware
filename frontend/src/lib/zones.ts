@@ -1,7 +1,7 @@
 /**
  * Per-sensor state: how far a reading is from the astronaut's own normal,
- * in the worrying direction only, shown with the same four colours and
- * shapes as the alert levels.
+ * in the worrying direction only, shown with the same four coloured
+ * circles as the alert levels, always with a word.
  *
  * Continuous signals: distance in units of the personal spread
  * (|value − center| / spread, roughly standard deviations):
@@ -13,8 +13,8 @@
  * (drift_threshold 1.5, threshold 2.5), so a sensor's colour agrees with
  * what the analysis flags. Update them if the team retunes the detector;
  * they are not exposed by the API yet.
- * Ordinal signals (symptoms, mood, stress): the scale itself, counted from
- * the good end (symptoms: none / mild / moderate / severe).
+ * Ordinal signals (symptoms, mood, stress) get no zone: their scale is a
+ * severity, drawn with neutral dots (SeverityDots), never level colours.
  *
  * These steps are a display choice for the demo, not clinical thresholds.
  */
@@ -51,23 +51,13 @@ function zoneForDistance(distance: number): Zone {
   return "red";
 }
 
-/** Zone of one value on an ordinal scale, counted from its good end. */
-export function zoneForOrdinal(value: number, spec: SignalSpec): Zone {
-  const min = spec.plausible_min;
-  const max = spec.plausible_max;
-  const steps = max - min; // number of steps on the scale
-  const rank = spec.concern === "down" ? max - value : value - min;
-  // 4-point scales map one to one; longer scales keep the good end green.
-  const index = steps >= 3 ? rank - (steps - 3) : Math.round((rank * 3) / Math.max(steps, 1));
-  return ZONES[Math.min(3, Math.max(0, Math.round(index)))];
-}
-
 export function zoneForReading(
   value: number,
   spec: SignalSpec,
   baseline: Pick<Baseline, "center" | "spread"> | undefined,
 ): Zone | null {
-  if (spec.kind === "ordinal" && spec.scale_labels) return zoneForOrdinal(value, spec);
+  // Ordinal signals (symptoms, mood, stress) are severity, not a level: no zone, neutral dots instead.
+  if (spec.kind === "ordinal") return null;
   if (!baseline || baseline.spread <= 0) return null;
   return zoneForDistance(worryingDistance(value, baseline.center, baseline.spread, spec.concern));
 }

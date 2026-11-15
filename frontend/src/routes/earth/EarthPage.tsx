@@ -10,7 +10,7 @@
 import { useMemo, useState } from "react";
 import { api, errorMessages } from "../../api/client";
 import type { DayResult, EarthPacket, OutboxItem } from "../../api/types";
-import { Corners, Frame } from "../../components/Frame";
+import { Frame } from "../../components/Frame";
 import { LevelIcon } from "../../components/LevelIcon";
 import { LevelTag } from "../../components/LevelTag";
 import { LoadError, Loading } from "../../components/StateMessage";
@@ -20,6 +20,7 @@ import type { AsyncState } from "../../lib/useAsync";
 import { useAsync } from "../../lib/useAsync";
 import { useNow } from "../../lib/useNow";
 import { useRegistry } from "../../state/registry-context";
+import "../../components/ScaleQuestion.css"; // segmented link choice
 import "../dashboard/Dashboard.css";
 import "./Earth.css";
 
@@ -35,15 +36,13 @@ export default function EarthPage({ astronautId, status }: { astronautId: string
 
   return (
     <div className="earth enter">
-      <div className="checkin__head">
-        <span className="identity__meta">
-          {astronaut?.callsign ?? astronautId} · {astronautId}
-        </span>
-        <h1 className="identity__name">Earth comms</h1>
-        <p className="checkin__lead">
-          You decide what leaves the spacecraft. Your score and level always travel; private details stay onboard.
+      <header className="screen-head">
+        <h1 className="large-title">Earth comms</h1>
+        <p className="screen-head__lead">
+          {astronaut?.callsign ?? astronautId} · {astronautId}. You decide what leaves the spacecraft. Your score and level always
+          travel; private details stay onboard.
         </p>
-      </div>
+      </header>
       {status.error ? (
         <LoadError error={status.error} retry={status.reload} what="assessment" />
       ) : !status.data || !astronaut ? (
@@ -135,7 +134,7 @@ function ConsentPanel({
 
   return (
     <Frame as="fieldset" className="checkin__group consent" aria-describedby="consent-help">
-      <legend className="section-label">Sharing with Earth</legend>
+      <legend className="checkin__legend">Sharing with Earth</legend>
       <p id="consent-help" className="consent__help">
         Turn a category on to send its readings to the flight surgeon. Changes apply to reports sent from now on.
       </p>
@@ -219,7 +218,7 @@ function ReportPreview({ packet, result, start, end }: { packet: EarthPacket; re
           <div className="preview__level">
             <LevelIcon level={level} size={28} />
             <div>
-              <span className="kicker">Always sent</span>
+              <span className="caption">Always sent</span>
               <p className="preview__word" style={{ color: levelInk(level) }}>
                 {levelCopy(level).word} · {formatNumber(latest.score, 0)}
                 <span className="secondary"> / 100</span>
@@ -233,7 +232,7 @@ function ReportPreview({ packet, result, start, end }: { packet: EarthPacket; re
                 <li key={`${c.label}-${i}`} className={isPrivate ? "preview__private" : undefined}>
                   {isPrivate && (
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                      <rect x="5" y="11" width="14" height="10" />
+                      <rect x="5" y="11" width="14" height="10" rx="2" />
                       <path d="M8 11V8a4 4 0 0 1 8 0v3" />
                     </svg>
                   )}
@@ -246,25 +245,32 @@ function ReportPreview({ packet, result, start, end }: { packet: EarthPacket; re
         </Frame>
       )}
 
-      <table className="table preview__table">
-        <caption className="visually-hidden">Readings per category for this report</caption>
-        <thead>
-          <tr>
-            <th scope="col">Category</th>
-            <th scope="col">Sent</th>
-            <th scope="col">Kept onboard</th>
-          </tr>
-        </thead>
-        <tbody>
-          {registry.categories.map((cat) => (
-            <tr key={cat}>
-              <th scope="row">{categoryName(cat)}</th>
-              <td>{sent[cat] ?? 0}</td>
-              <td className={withheld[cat] ? "preview__kept" : "secondary"}>{withheld[cat] ?? 0}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <details className="disclosure disclosure--quiet preview__details">
+        <summary>
+          Show readings: {Object.values(sent).reduce((a, b) => a + b, 0)} sent, {Object.values(withheld).reduce((a, b) => a + (b ?? 0), 0)} kept onboard
+        </summary>
+        <div className="card preview__table-card">
+          <table className="table preview__table">
+            <caption className="visually-hidden">Readings per category for this report</caption>
+            <thead>
+              <tr>
+                <th scope="col">Category</th>
+                <th scope="col">Sent</th>
+                <th scope="col">Kept onboard</th>
+              </tr>
+            </thead>
+            <tbody>
+              {registry.categories.map((cat) => (
+                <tr key={cat}>
+                  <th scope="row">{categoryName(cat)}</th>
+                  <td>{sent[cat] ?? 0}</td>
+                  <td className={withheld[cat] ? "preview__kept" : "secondary"}>{withheld[cat] ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
     </section>
   );
 }
@@ -310,11 +316,11 @@ function SendPanel({
   return (
     <div className="earth__side">
       <Frame as="section" className="review send" aria-labelledby="send-heading">
-        <span id="send-heading" className="kicker">
+        <h2 id="send-heading" className="headline">
           Send to Earth
-        </span>
+        </h2>
         {recommended && (
-          <p className="send__advice" style={{ borderColor: levelInk(level) }}>
+          <p className="send__advice">
             <LevelTag level={level} /> Your status is {levelCopy(level).word}. Sending a report to the flight surgeon is recommended.
           </p>
         )}
@@ -340,8 +346,7 @@ function SendPanel({
             The report wasn't queued: {errorMessages(error).join(" ")}
           </p>
         )}
-        <button type="button" className="btn btn-primary blueprint review__save" disabled={sending} onClick={() => void send()}>
-          <Corners />
+        <button type="button" className="btn btn-primary review__save" disabled={sending} onClick={() => void send()}>
           {sending ? "Queuing report…" : "Send report"}
         </button>
       </Frame>
@@ -351,14 +356,14 @@ function SendPanel({
           <h2 id="outbox-heading" className="section-label">
             Outbox
           </h2>
-          <span className="secondary">{outbox.data ? `${outbox.data.length} sent` : ""}</span>
+          <span className="secondary data">{outbox.data ? `${outbox.data.length} sent` : ""}</span>
         </div>
         {outbox.error ? (
           <LoadError error={outbox.error} retry={outbox.reload} what="outbox" />
         ) : !outbox.data ? (
           <Loading what="outbox" />
         ) : outbox.data.length === 0 ? (
-          <p className="secondary">Nothing has been sent yet.</p>
+          <p className="card empty-card secondary">Nothing has been sent yet.</p>
         ) : (
           <ul className="outbox__list">
             {outbox.data.map((item) => (

@@ -1,5 +1,4 @@
 import { levelColor } from "../lib/levels";
-import { shapePath } from "../lib/shapes";
 
 interface Props {
   points: { t: number; v: number }[];
@@ -7,7 +6,7 @@ interface Props {
   band?: { low: number; high: number };
   /** Fixed value range (ordinal scales); otherwise fitted to points and band. */
   domain?: [number, number];
-  /** State of the last point: drawn in that level's shape and colour. */
+  /** State of the last point: drawn as a circle in that level's colour. */
   lastLevel?: string | null;
   width?: number;
   height?: number;
@@ -15,8 +14,8 @@ interface Props {
 }
 
 /**
- * A small trend line with the personal normal behind it, the last point in
- * its state's shape. Decorative: the row it sits in states value and state
+ * A small trend line with the personal normal behind it, the last point a
+ * circle in its state's colour. Decorative: the row it sits in states value and state
  * in words.
  */
 export function Sparkline({
@@ -26,7 +25,7 @@ export function Sparkline({
   lastLevel,
   width = 84,
   height = 26,
-  stroke = "var(--color-neutral-800)",
+  stroke = "var(--accent)",
 }: Props) {
   if (points.length === 0) return <svg width={width} height={height} aria-hidden="true" />;
 
@@ -54,14 +53,11 @@ export function Sparkline({
           width={width}
           y={Math.max(0, Y(band.high))}
           height={Math.max(0, Math.min(height, Y(band.low)) - Math.max(0, Y(band.high)))}
-          style={{ fill: "var(--band)" }}
+          style={{ fill: "var(--accent-tint)" }}
         />
       )}
       <path d={path} fill="none" style={{ stroke }} strokeWidth={1.5} />
-      <path
-        d={shapePath(lastLevel ?? "green", X(n - 1), Y(last.v), 3.2)}
-        style={{ fill: lastLevel ? levelColor(lastLevel) : "var(--color-text)" }}
-      />
+      <circle cx={X(n - 1)} cy={Y(last.v)} r={3.2} style={{ fill: lastLevel ? levelColor(lastLevel) : "var(--text-2)" }} />
     </svg>
   );
 }

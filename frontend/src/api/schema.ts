@@ -229,6 +229,8 @@ export interface paths {
         /**
          * Send Earth Packet
          * @description Package the period through the consent gate and queue it for Earth (B16).
+         *
+         *     ``summary`` is the plain-language report for the flight surgeon (B17).
          */
         post: operations["send_earth_packet_api_crew__astronaut_id__earth_packet_send_post"];
         delete?: never;
@@ -302,6 +304,104 @@ export interface paths {
         put?: never;
         /** Run */
         post: operations["run_api_pipeline_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/crew/{astronaut_id}/triage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Triage Sessions
+         * @description This astronaut's chats started (real time) in [start, end], newest first. No shared view.
+         */
+        get: operations["triage_sessions_api_crew__astronaut_id__triage_get"];
+        put?: never;
+        /**
+         * Triage Start
+         * @description Start a chat check-in. Nothing is saved as a check-in until confirm.
+         */
+        post: operations["triage_start_api_crew__astronaut_id__triage_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/crew/{astronaut_id}/triage/{session_id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Triage Answer */
+        post: operations["triage_answer_api_crew__astronaut_id__triage__session_id__answer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/crew/{astronaut_id}/triage/{session_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Triage Confirm
+         * @description Save the findings as a check-in, re-assess, and keep the chat's cards with that run.
+         *
+         *     If the body carries a red flag but is invalid, the chat is escalated, not
+         *     confirmed: ``result`` is the escalated result and ``day`` is null.
+         */
+        post: operations["triage_confirm_api_crew__astronaut_id__triage__session_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/crew/{astronaut_id}/triage/{session_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Triage Cancel */
+        post: operations["triage_cancel_api_crew__astronaut_id__triage__session_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/crew/{astronaut_id}/triage/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Triage Session */
+        get: operations["triage_session_api_crew__astronaut_id__triage__session_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -761,6 +861,31 @@ export interface components {
             score: number | null;
             /** Assessed At */
             assessed_at: string | null;
+            /**
+             * Red Flag At
+             * @description Mission time of the latest triage red flag in the last 24 h (real time); no details (M15).
+             */
+            red_flag_at?: string | null;
+        };
+        /**
+         * PatternScore
+         * @description How well one pattern fits the evidence, with up to 3 reasons.
+         */
+        PatternScore: {
+            pattern: components["schemas"]["TriagePattern"];
+            /**
+             * Label
+             * @description Plain words, from cards/patterns.jsonl.
+             * @default
+             */
+            label: string;
+            /** Probability */
+            probability: number;
+            /**
+             * Reasons
+             * @default []
+             */
+            reasons: components["schemas"]["Contributor"][];
         };
         /**
          * Quality
@@ -842,6 +967,261 @@ export interface components {
          * @enum {string}
          */
         Source: "wearable" | "checkin" | "lab" | "environment" | "ground" | "manual";
+        /**
+         * SymptomFinding
+         * @description One symptom ORBIT understood from the text or an answer.
+         *
+         *     ``signal`` is one of the 8 symptom signals, or ``None`` for a complaint
+         *     outside them (nausea, dizziness ...), which is kept for the medical
+         *     officer and never dropped. ``evidence`` holds the words from the text it
+         *     is based on (empty when it came from an answer).
+         */
+        SymptomFinding: {
+            signal?: components["schemas"]["SignalType"] | null;
+            /** Label */
+            label: string;
+            /**
+             * Severity
+             * @description 0-3; None if not said.
+             */
+            severity?: number | null;
+            /**
+             * Negated
+             * @description True for 'no sore throat'.
+             * @default false
+             */
+            negated: boolean;
+            /**
+             * Confidence
+             * @default 1
+             */
+            confidence: number;
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: string[];
+            /**
+             * Onset Hours
+             * @description How long ago it started.
+             */
+            onset_hours?: number | null;
+            /** Body Site */
+            body_site?: string | null;
+            /** Side */
+            side?: ("left" | "right" | "both" | "one_side") | null;
+        };
+        /**
+         * SymptomReport
+         * @description One message from the astronaut, as typed or dictated.
+         */
+        SymptomReport: {
+            /** Report Id */
+            report_id?: string;
+            /** Astronaut Id */
+            astronaut_id: string;
+            /**
+             * Reported At
+             * Format: date-time
+             */
+            reported_at: string;
+            /** Text */
+            text: string;
+            /**
+             * Channel
+             * @default text
+             * @enum {string}
+             */
+            channel: "text" | "voice";
+        };
+        /**
+         * TriageAnswer
+         * @description The astronaut's answer to one question; ``value`` is None when skipped.
+         */
+        TriageAnswer: {
+            /** Question Id */
+            question_id: string;
+            /** Value */
+            value?: boolean | number | string | null;
+            /**
+             * Answered At
+             * Format: date-time
+             */
+            answered_at: string;
+        };
+        /**
+         * TriageConfirmed
+         * @description The confirmed chat and the new assessment, with the chat's cards.
+         *
+         *     ``day`` is null when a red flag in an invalid confirm escalated the chat instead.
+         */
+        TriageConfirmed: {
+            result: components["schemas"]["TriageResult"];
+            day?: components["schemas"]["DayResult"] | null;
+        };
+        /**
+         * TriagePattern
+         * @description What a set of symptoms may fit. Training labels in brackets (simulator, B24).
+         * @enum {string}
+         */
+        TriagePattern: "vzv_like" | "hsv1_like" | "ebv_like" | "respiratory" | "exertion" | "sleep_loss" | "stress" | "other";
+        /**
+         * TriageQuestion
+         * @description One follow-up question from the hand-written bank (``cards/questions.jsonl``).
+         *
+         *     * A **symptom question** has a ``signal``, no ``feature`` and answer type
+         *       ``scale_0_3``: its answer is that symptom's severity. Its choices are
+         *       the signal's scale words (none, mild, moderate, severe).
+         *     * A **feature question** has a ``feature`` (``one_side``,
+         *       ``recent_exertion`` ...). With a ``signal`` too, it is asked only when
+         *       that symptom was reported; for a screening question, that symptom is
+         *       the complaint that calls for it.
+         *
+         *     ``likelihoods[pattern][answer]`` is P(answer | pattern), hand-set and
+         *     illustrative. A pattern that is listed must cover every answer and sum to
+         *     1; a pattern that is not listed gets 1 / (number of answers).
+         */
+        TriageQuestion: {
+            /** Question Id */
+            question_id: string;
+            /** Text */
+            text: string;
+            /**
+             * Answer Type
+             * @enum {string}
+             */
+            answer_type: "yes_no" | "scale_0_3" | "choice" | "reading";
+            /**
+             * Choices
+             * @default []
+             */
+            choices: string[];
+            signal?: components["schemas"]["SignalType"] | null;
+            /** Feature */
+            feature?: string | null;
+            /** Likelihoods */
+            likelihoods?: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+            /**
+             * Red Flag Answers
+             * @default []
+             */
+            red_flag_answers: string[];
+            /** @default symptom */
+            category: components["schemas"]["SignalCategory"];
+            /**
+             * Screening
+             * @default false
+             */
+            screening: boolean;
+        };
+        /**
+         * TriageResult
+         * @description Everything one turn of a triage chat produced.
+         */
+        TriageResult: {
+            /** Session Id */
+            session_id: string;
+            /** Astronaut Id */
+            astronaut_id: string;
+            /**
+             * As Of
+             * Format: date-time
+             * @description The moment assessed (mission time in the demo).
+             */
+            as_of: string;
+            status: components["schemas"]["TriageStatus"];
+            /**
+             * Findings
+             * @default []
+             */
+            findings: components["schemas"]["SymptomFinding"][];
+            /**
+             * Ranking
+             * @default []
+             */
+            ranking: components["schemas"]["PatternScore"][];
+            next_question?: components["schemas"]["TriageQuestion"] | null;
+            /**
+             * Red Flags
+             * @description Ids of the red-flag rules that fired.
+             * @default []
+             */
+            red_flags: string[];
+            /**
+             * Procedures
+             * @default []
+             */
+            procedures: components["schemas"]["ActionCard"][];
+            /**
+             * Errors
+             * @description Steps that failed; the rest of the result is still valid.
+             * @default []
+             */
+            errors: string[];
+            /**
+             * Model Version
+             * @default unversioned
+             */
+            model_version: string;
+        };
+        /**
+         * TriageSession
+         * @description One triage chat. Stored whole in the ``triage_sessions`` table.
+         *
+         *     ``started_at`` and ``updated_at`` are wall-clock times (for the session
+         *     timeout); ``as_of`` is the moment assessed, which is mission time in the demo.
+         */
+        TriageSession: {
+            /** Session Id */
+            session_id: string;
+            /** Astronaut Id */
+            astronaut_id: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /**
+             * Reports
+             * @default []
+             */
+            reports: components["schemas"]["SymptomReport"][];
+            /**
+             * Answers
+             * @default []
+             */
+            answers: components["schemas"]["TriageAnswer"][];
+            result?: components["schemas"]["TriageResult"] | null;
+            /** @default asking */
+            status: components["schemas"]["TriageStatus"];
+            /** Confirmed As Of */
+            confirmed_as_of?: string | null;
+            /**
+             * Done
+             * @description The astronaut said 'that's all': no more questions.
+             * @default false
+             */
+            done: boolean;
+        };
+        /**
+         * TriageStatus
+         * @enum {string}
+         */
+        TriageStatus: "asking" | "ready" | "escalated" | "confirmed" | "cancelled" | "expired";
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1380,6 +1760,250 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    triage_sessions_api_crew__astronaut_id__triage_get: {
+        parameters: {
+            query?: {
+                start?: string | null;
+                end?: string | null;
+            };
+            header?: never;
+            path: {
+                astronaut_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriageSession"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    triage_start_api_crew__astronaut_id__triage_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                astronaut_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Text
+                     * @example Weird burning, tingly patch on my ribs since last night. Pretty wiped out too.
+                     */
+                    text: string;
+                    /**
+                     * Timestamp
+                     * @description The moment assessed (mission time in the demo). Default: now.
+                     */
+                    timestamp?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriageResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    triage_answer_api_crew__astronaut_id__triage__session_id__answer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                astronaut_id: string;
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Question Id
+                     * @example rash-tingling
+                     */
+                    question_id?: string | null;
+                    /**
+                     * Value
+                     * @example moderate
+                     */
+                    value?: boolean | number | string | null;
+                    /** Text */
+                    text?: string | null;
+                    /**
+                     * Done
+                     * @default false
+                     */
+                    done?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriageResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    triage_confirm_api_crew__astronaut_id__triage__session_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                astronaut_id: string;
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /**
+                     * Corrections
+                     * @example {
+                     *       "symptom_rash_tingling": 2
+                     *     }
+                     */
+                    corrections?: {
+                        [key: string]: number;
+                    } | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriageConfirmed"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    triage_cancel_api_crew__astronaut_id__triage__session_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                astronaut_id: string;
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriageSession"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    triage_session_api_crew__astronaut_id__triage__session_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                astronaut_id: string;
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriageSession"];
                 };
             };
             /** @description Validation Error */

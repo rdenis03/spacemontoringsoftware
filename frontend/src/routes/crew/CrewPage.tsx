@@ -17,7 +17,6 @@ import { api } from "../../api/client";
 import type { DayResult, RiskAssessment } from "../../api/types";
 import { Frame } from "../../components/Frame";
 import { LevelIcon } from "../../components/LevelIcon";
-import { shapePath } from "../../lib/shapes";
 import { LevelTag } from "../../components/LevelTag";
 import { LoadError, Loading } from "../../components/StateMessage";
 import { formatNumber, humanize, missionDay } from "../../lib/format";
@@ -86,13 +85,13 @@ export default function CrewPage({ freshness }: { freshness: string }) {
   return (
     <div className="crew enter">
       <div className="crew__head">
-        <div className="crew__title">
-          <span className="identity__meta">
-            {entries.length} astronauts{day ? ` · mission day ${day}` : ""}
-          </span>
-          <h1 className="identity__name">Crew</h1>
-        </div>
-        <dl className="tally">
+        <header className="screen-head">
+          <h1 className="large-title">Crew</h1>
+          <p className="screen-head__lead">
+            {entries.length} astronauts{day ? ` · mission day ${day}` : ""}. Worst first; private reasons stay private.
+          </p>
+        </header>
+        <dl className="tally card">
           {order.map((level) => (
             <div key={level}>
               <dt className="visually-hidden">{levelCopy(level).word}</dt>
@@ -137,12 +136,12 @@ function CrewCard({ entry, open, onToggle }: { entry: CrewEntry; open: boolean; 
   return (
     <Frame as="li" className="crew-card" aria-label={`${entry.callsign}, ${levelCopy(level).word}, score ${entry.score ?? "unknown"}`}>
       <header className="crew-card__head">
-        <span className="crew-card__initial" aria-hidden="true">
+        <span className="avatar crew-card__initial" aria-hidden="true">
           {entry.callsign.charAt(0)}
         </span>
         <div className="crew-card__who">
           <span className="crew-card__name">{entry.callsign}</span>
-          <span className="secondary">
+          <span className="caption">
             {entry.role} · {entry.id}
           </span>
         </div>
@@ -157,35 +156,37 @@ function CrewCard({ entry, open, onToggle }: { entry: CrewEntry; open: boolean; 
         </div>
         <span className="figure crew-card__score">
           {entry.score !== null ? formatNumber(entry.score, 0) : "—"}
-          <span className="secondary">/100</span>
+          <span className="secondary"> / 100</span>
         </span>
       </div>
 
       <ScoreLine points={recent} thresholds={registry.alert_levels} />
       {recent.length > 0 && (
-        <div className="crew-card__axis">
-          <span>Day {dayOf(recent[0].assessed_at)}</span>
-          <span>{recent.length}-day score</span>
-          <span>Day {dayOf(recent[recent.length - 1].assessed_at)}</span>
-        </div>
+        <span className="caption crew-card__axis">
+          {recent.length}-day score · day {dayOf(recent[0].assessed_at)} to {dayOf(recent[recent.length - 1].assessed_at)}
+        </span>
       )}
 
-      <dl className="crew-card__facts">
-        <div>
-          <dt>Top reason</dt>
-          <dd>{top}</dd>
-        </div>
-        <div>
-          <dt>Last check-in</dt>
-          <dd className="data">
-            {entry.lastCheckin ? `Day ${dayOf(entry.lastCheckin)} · ${new Date(entry.lastCheckin).toISOString().slice(11, 16)} UTC` : "—"}
-          </dd>
-        </div>
-        <div>
-          <dt>Escalation</dt>
-          <dd>{escalations.length ? escalations.join(", ") : "None"}</dd>
-        </div>
-      </dl>
+      <p className="crew-card__top">
+        <span className="caption">Top reason</span>
+        <span>{top}</span>
+      </p>
+
+      <details className="disclosure disclosure--quiet">
+        <summary>Show details</summary>
+        <dl className="crew-card__facts">
+          <div>
+            <dt>Last check-in</dt>
+            <dd className="data">
+              {entry.lastCheckin ? `Day ${dayOf(entry.lastCheckin)} · ${new Date(entry.lastCheckin).toISOString().slice(11, 16)} UTC` : "—"}
+            </dd>
+          </div>
+          <div>
+            <dt>Escalation</dt>
+            <dd>{escalations.length ? escalations.join(", ") : "None"}</dd>
+          </div>
+        </dl>
+      </details>
 
       <div className="crew-card__actions">
         <button
@@ -200,7 +201,7 @@ function CrewCard({ entry, open, onToggle }: { entry: CrewEntry; open: boolean; 
             <path d={open ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"} />
           </svg>
         </button>
-        <Link className="btn btn-ghost" to={{ pathname: "/", search: `?astronaut=${encodeURIComponent(entry.id)}` }}>
+        <Link className="btn btn-ghost" to={{ pathname: "/today", search: `?astronaut=${encodeURIComponent(entry.id)}` }}>
           Dashboard
         </Link>
       </div>
@@ -208,7 +209,7 @@ function CrewCard({ entry, open, onToggle }: { entry: CrewEntry; open: boolean; 
   );
 }
 
-/** 14-day score on the level bands; the last point in its level's shape. Decorative. */
+/** 14-day score on the level bands; the last point a circle in its level's colour. Decorative. */
 function ScoreLine({ points, thresholds }: { points: RiskAssessment[]; thresholds: { level: string; min_score: number }[] }) {
   const W = 240;
   const H = 60;
@@ -220,17 +221,20 @@ function ScoreLine({ points, thresholds }: { points: RiskAssessment[]; threshold
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="crew-card__chart" aria-hidden="true">
       {levelBands(thresholds).map((b) => (
-        <rect key={b.level} x="0" width={W} y={Y(b.to)} height={Y(b.from) - Y(b.to)} style={{ fill: levelTint(b.level, 12) }} />
+        <rect key={b.level} x="0" width={W} y={Y(b.to)} height={Y(b.from) - Y(b.to)} style={{ fill: levelTint(b.level, 10) }} />
       ))}
       <path
         d={points.map((a, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(a.score).toFixed(1)}`).join("")}
         fill="none"
-        style={{ stroke: "var(--color-text)" }}
+        style={{ stroke: "var(--accent)" }}
         strokeWidth={1.5}
+        strokeLinejoin="round"
       />
-      <path
-        d={shapePath(lastLevel, X(points.length - 1), Y(last.score), 4)}
-        style={{ fill: levelColor(lastLevel), stroke: "var(--color-bg)" }}
+      <circle
+        cx={X(points.length - 1)}
+        cy={Y(last.score)}
+        r={4}
+        style={{ fill: levelColor(lastLevel), stroke: "var(--card)" }}
         strokeWidth={1}
       />
     </svg>
@@ -249,8 +253,8 @@ function SharedDetail({ entry, onClose }: { entry: CrewEntry; onClose: () => voi
     <Frame as="section" id="crew-detail" className="crew-detail" aria-labelledby="crew-detail-title">
       <div className="section-head">
         <div>
-          <span className="kicker">Shared status · {entry.id}</span>
-          <h2 id="crew-detail-title" className="crew-detail__title">
+          <span className="caption">Shared status · {entry.id}</span>
+          <h2 id="crew-detail-title" className="title">
             {entry.callsign}
           </h2>
         </div>
@@ -274,16 +278,16 @@ function SharedDetail({ entry, onClose }: { entry: CrewEntry; onClose: () => voi
             </div>
           </div>
           <section aria-labelledby="crew-detail-reasons">
-            <h3 id="crew-detail-reasons" className="section-label">
+            <h3 id="crew-detail-reasons" className="headline">
               Reasons
             </h3>
             {reasons.length === 0 ? (
               <p className="secondary">Nothing raised the score.</p>
             ) : (
-              <ol className="crew-detail__reasons">
+              <ol className="group crew-detail__reasons">
                 {reasons.map((c, i) => (
                   <li key={`${c.label}-${i}`} className={isPrivate(c) ? "crew-detail__private" : undefined}>
-                    <span className="numbered__n data">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="numbered__n data">{i + 1}</span>
                     <span>{isPrivate(c) ? `${PRIVATE_TEXT} (not shared by ${entry.callsign})` : c.label}</span>
                     <span className="secondary data">{formatNumber(c.points, 1)} pts</span>
                   </li>
@@ -297,13 +301,13 @@ function SharedDetail({ entry, onClose }: { entry: CrewEntry; onClose: () => voi
             )}
           </section>
           <section aria-labelledby="crew-detail-cards">
-            <h3 id="crew-detail-cards" className="section-label">
+            <h3 id="crew-detail-cards" className="headline">
               Action cards
             </h3>
             {(status?.actions ?? []).length === 0 ? (
               <p className="secondary">No action cards.</p>
             ) : (
-              <ul className="crew-detail__cards">
+              <ul className="group crew-detail__cards">
                 {(status?.actions ?? []).map((card) => (
                   <li key={card.card_id}>
                     <span className="crew-detail__card-title">{card.title}</span>

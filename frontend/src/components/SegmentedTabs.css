@@ -1,43 +1,44 @@
-/* Uppercase tabs, the selected one underlined in the accent. */
+/* Pill-shaped segmented control: a grey track, the selected segment raised on it. */
 .segmented {
-  display: flex;
-  align-self: flex-end;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--fill);
+  border-radius: var(--radius-pill);
 }
 
 .segmented__tab {
-  position: relative;
-  display: flex;
-  align-items: baseline;
-  padding: 14px 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  min-width: 88px;
+  padding: 0 18px;
   border: 0;
+  border-radius: var(--radius-pill);
   background: transparent;
-  color: var(--color-neutral-600);
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 15px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  color: var(--text);
+  font-size: var(--text-secondary);
+  font-weight: 500;
   cursor: pointer;
-}
-
-.segmented__tab::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 2px;
-  background: transparent;
+  transition:
+    background-color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
 }
 
 .segmented__tab:hover {
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
 }
 
 .segmented__tab[aria-selected="true"] {
-  color: var(--color-text);
+  background: var(--card);
+  font-weight: 600;
+  box-shadow: var(--shadow-segment);
 }
 
-.segmented__tab[aria-selected="true"]::after {
-  background: var(--color-accent);
+@media (prefers-color-scheme: dark) {
+  .segmented__tab[aria-selected="true"] {
+    background: var(--fill-strong);
+    box-shadow: none;
+  }
 }
