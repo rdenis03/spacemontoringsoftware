@@ -88,7 +88,7 @@ every API task edits `orbit/api/app.py`.
 | [x] | [B19](B19-action-cards.md) | Action cards v2 | Crew guidance | none | S |
 | [x] | [B20](B20-live-demo-tool.md) | Live body demo tool | Demo | none | S |
 | [x] | [B23](B23-triage-v1.md) | Symptom triage v1: rules, end to end | Triage (M15) | B15, B18, B19 | L |
-| [ ] | [B24](B24-triage-ml.md) | Symptom triage v2: the models | Triage (M15) | B23 | L |
+| [x] | [B24](B24-triage-ml.md) | Symptom triage v2: the models | Triage (M15) | B23 | L |
 
 S = one short agent session. M = a longer one, or two.
 L = one long agent session, in checkpoints.

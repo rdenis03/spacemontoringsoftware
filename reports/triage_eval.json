@@ -1,0 +1,427 @@
+{
+  "simulated": true,
+  "note": "Simulated missions and hand-set answer likelihoods: the reasoner numbers measure consistency with the question bank, not medical truth. Extractor numbers are provisional (20-line stub, same author as the templates). Illustrative, not clinical.",
+  "settings": {
+    "days": 180,
+    "crew": 4,
+    "seeds": [
+      101,
+      102,
+      103,
+      104,
+      105
+    ],
+    "simulator": {
+      "symptom_lookalikes": true,
+      "mild_illness_rate": 0.3
+    }
+  },
+  "configs": [
+    {
+      "config": "orbit.toml",
+      "modules": {
+        "extractor": "lexicon",
+        "reasoner": "rules"
+      },
+      "extractor": {
+        "provisional": true,
+        "sentences": 20,
+        "sources": [
+          "stub-claude"
+        ],
+        "f1": {
+          "symptom_fatigue": 1.0,
+          "symptom_fever_chills": 1.0,
+          "symptom_sore_throat": 1.0,
+          "symptom_swollen_glands": 1.0,
+          "symptom_mouth_sores": 1.0,
+          "symptom_rash_tingling": 0.8,
+          "symptom_headache": 1.0,
+          "symptom_muscle_aches": 0.8571428571428571
+        },
+        "macro_f1": 0.9571428571428572,
+        "negation_accuracy": 0.90625,
+        "severity_within_one": 0.875
+      },
+      "red_flags": {
+        "positive": 41,
+        "negative": 15,
+        "recall": 1.0,
+        "missed": [],
+        "false_fires": 0,
+        "note": "the gate runs on the raw text before any model"
+      },
+      "reasoner": {
+        "extractor_used": "lexicon",
+        "without_answers": {
+          "n": 459,
+          "top1": 0.9934640522875817,
+          "top3": 1,
+          "brier": 0.1906836733135509
+        },
+        "with_answers": {
+          "n": 459,
+          "top1": 0.971677559912854,
+          "top3": 1,
+          "brier": 0.15009087067983456
+        },
+        "questions_per_session": 3.603485838779956,
+        "chat_errors": 0,
+        "by_pattern": {
+          "vzv_like": {
+            "without_answers": {
+              "n": 49,
+              "top1": 1,
+              "top3": 1,
+              "brier": 0.0757341129197381
+            },
+            "with_answers": {
+              "n": 49,
+              "top1": 0.9591836734693877,
+              "top3": 1,
+              "brier": 0.08700571415824371
+            }
+          },
+          "hsv1_like": {
+            "without_answers": {
+              "n": 42,
+              "top1": 1,
+              "top3": 1,
+              "brier": 0.14009470362907403
+            },
+            "with_answers": {
+              "n": 42,
+              "top1": 1,
+              "top3": 1,
+              "brier": 0.076772497136614
+            }
+          },
+          "ebv_like": {
+            "without_answers": {
+              "n": 31,
+              "top1": 1,
+              "top3": 1,
+              "brier": 0.041935869775099756
+            },
+            "with_answers": {
+              "n": 31,
+              "top1": 0.967741935483871,
+              "top3": 1,
+              "brier": 0.08054549648197437
+            }
+          },
+          "respiratory": {
+            "without_answers": {
+              "n": 73,
+              "top1": 1,
+              "top3": 1,
+              "brier": 0.033004500402087
+            },
+            "with_answers": {
+              "n": 73,
+              "top1": 1,
+              "top3": 1,
+              "brier": 0.03836712954542057
+            }
+          },
+          "exertion": {
+            "without_answers": {
+              "n": 71,
+              "top1": 1,
+              "top3": 1,
+              "brier": 0.20038893775144476
+            },
+            "with_answers": {
+              "n": 71,
+              "top1": 1,
+              "top3": 1,
+              "brier": 0.11032343370746844
+            }
+          },
+          "sleep_loss": {
+            "without_answers": {
+              "n": 67,
+              "top1": 0.9552238805970149,
+              "top3": 1,
+              "brier": 0.4348086415244336
+            },
+            "with_answers": {
+              "n": 67,
+              "top1": 0.8507462686567164,
+              "top3": 1,
+              "brier": 0.42077329980354805
+            }
+          },
+          "stress": {
+            "without_answers": {
+              "n": 79,
+              "top1": 1,
+              "top3": 1,
+              "brier": 0.24022129522615668
+            },
+            "with_answers": {
+              "n": 79,
+              "top1": 1,
+              "top3": 1,
+              "brier": 0.15337975006555235
+            }
+          },
+          "other": {
+            "without_answers": {
+              "n": 47,
+              "top1": 1,
+              "top3": 1,
+              "brier": 0.2528136295254284
+            },
+            "with_answers": {
+              "n": 47,
+              "top1": 1,
+              "top3": 1,
+              "brier": 0.16945742096912364
+            }
+          }
+        }
+      },
+      "m9": {
+        "m9_without_chats": {
+          "sensitivity": 0.975,
+          "lead_time_days_median": 0.0,
+          "false_alarms_per_30_days": 0.008333333333333333,
+          "detected": 44,
+          "should_alert": 45,
+          "false_alarms": 1
+        },
+        "m9_with_chats": {
+          "sensitivity": 0.975,
+          "lead_time_days_median": 0.0,
+          "false_alarms_per_30_days": 0.008333333333333333,
+          "detected": 44,
+          "should_alert": 45,
+          "false_alarms": 1
+        }
+      },
+      "confirmed_chat_errors": 0
+    },
+    {
+      "config": "experiments/triage_learned.toml",
+      "modules": {
+        "extractor": "text_linear",
+        "reasoner": "bayes"
+      },
+      "extractor": {
+        "provisional": true,
+        "sentences": 20,
+        "sources": [
+          "stub-claude"
+        ],
+        "f1": {
+          "symptom_fatigue": 1.0,
+          "symptom_fever_chills": 1.0,
+          "symptom_sore_throat": 0.8571428571428571,
+          "symptom_swollen_glands": 1.0,
+          "symptom_mouth_sores": 1.0,
+          "symptom_rash_tingling": 1.0,
+          "symptom_headache": 1.0,
+          "symptom_muscle_aches": 0.8571428571428571
+        },
+        "macro_f1": 0.9642857142857143,
+        "negation_accuracy": 0.9375,
+        "severity_within_one": 0.875
+      },
+      "red_flags": {
+        "positive": 41,
+        "negative": 15,
+        "recall": 1.0,
+        "missed": [],
+        "false_fires": 0,
+        "note": "the gate runs on the raw text before any model"
+      },
+      "reasoner": {
+        "extractor_used": "lexicon",
+        "without_answers": {
+          "n": 459,
+          "top1": 0.9760348583877996,
+          "top3": 0.9912854030501089,
+          "brier": 0.03991180346631834
+        },
+        "with_answers": {
+          "n": 459,
+          "top1": 0.9760348583877996,
+          "top3": 0.9912854030501089,
+          "brier": 0.04202121150441737
+        },
+        "questions_per_session": 1.4553376906318083,
+        "chat_errors": 0,
+        "by_pattern": {
+          "vzv_like": {
+            "without_answers": {
+              "n": 49,
+              "top1": 1,
+              "top3": 1,
+              "brier": 3.884087886448327e-07
+            },
+            "with_answers": {
+              "n": 49,
+              "top1": 1,
+              "top3": 1,
+              "brier": 4.272875830199991e-07
+            }
+          },
+          "hsv1_like": {
+            "without_answers": {
+              "n": 42,
+              "top1": 1,
+              "top3": 1,
+              "brier": 3.715865250339157e-07
+            },
+            "with_answers": {
+              "n": 42,
+              "top1": 1,
+              "top3": 1,
+              "brier": 2.408833545352585e-07
+            }
+          },
+          "ebv_like": {
+            "without_answers": {
+              "n": 31,
+              "top1": 1,
+              "top3": 1,
+              "brier": 1.0522378708585876e-07
+            },
+            "with_answers": {
+              "n": 31,
+              "top1": 1,
+              "top3": 1,
+              "brier": 9.311078924803937e-08
+            }
+          },
+          "respiratory": {
+            "without_answers": {
+              "n": 73,
+              "top1": 0.958904109589041,
+              "top3": 1,
+              "brier": 0.07115188583168738
+            },
+            "with_answers": {
+              "n": 73,
+              "top1": 0.958904109589041,
+              "top3": 1,
+              "brier": 0.07478469236760879
+            }
+          },
+          "exertion": {
+            "without_answers": {
+              "n": 71,
+              "top1": 0.9859154929577465,
+              "top3": 0.9859154929577465,
+              "brier": 0.02265060920033007
+            },
+            "with_answers": {
+              "n": 71,
+              "top1": 0.9859154929577465,
+              "top3": 0.9859154929577465,
+              "brier": 0.026281741044084973
+            }
+          },
+          "sleep_loss": {
+            "without_answers": {
+              "n": 67,
+              "top1": 0.9701492537313433,
+              "top3": 0.9850746268656716,
+              "brier": 0.05600208441491273
+            },
+            "with_answers": {
+              "n": 67,
+              "top1": 0.9701492537313433,
+              "top3": 0.9850746268656716,
+              "brier": 0.055782521476344826
+            }
+          },
+          "stress": {
+            "without_answers": {
+              "n": 79,
+              "top1": 0.9746835443037974,
+              "top3": 0.9746835443037974,
+              "brier": 0.04412895053427875
+            },
+            "with_answers": {
+              "n": 79,
+              "top1": 0.9746835443037974,
+              "top3": 0.9746835443037974,
+              "brier": 0.049950820512985265
+            }
+          },
+          "other": {
+            "without_answers": {
+              "n": 47,
+              "top1": 0.9361702127659575,
+              "top3": 1,
+              "brier": 0.09103983454243053
+            },
+            "with_answers": {
+              "n": 47,
+              "top1": 0.9361702127659575,
+              "top3": 1,
+              "brier": 0.09103983454243053
+            }
+          }
+        }
+      },
+      "m9": {
+        "m9_without_chats": {
+          "sensitivity": 0.975,
+          "lead_time_days_median": 0.0,
+          "false_alarms_per_30_days": 0.008333333333333333,
+          "detected": 44,
+          "should_alert": 45,
+          "false_alarms": 1
+        },
+        "m9_with_chats": {
+          "sensitivity": 0.975,
+          "lead_time_days_median": 0.0,
+          "false_alarms_per_30_days": 0.008333333333333333,
+          "detected": 44,
+          "should_alert": 45,
+          "false_alarms": 1
+        }
+      },
+      "confirmed_chat_errors": 0
+    }
+  ],
+  "switch": {
+    "experiments/triage_learned.toml": {
+      "extractor": {
+        "beats_on_f1": true,
+        "beats_on_negation": true,
+        "misses_no_red_flag": true,
+        "human_sentences_are_the_stub": true,
+        "passes": true,
+        "recommend_switch": false,
+        "why": "not until about 200 human-written sentences replace the stub"
+      },
+      "reasoner": {
+        "without_answers": {
+          "beats_on_top1": false,
+          "beats_on_top3": false,
+          "beats_on_brier": true
+        },
+        "with_answers": {
+          "beats_on_top1": true,
+          "beats_on_top3": false,
+          "beats_on_brier": true
+        },
+        "no_more_questions": true,
+        "passes_on_main_comparison": false,
+        "recommend_switch": false,
+        "main_comparison": "without_answers (with_answers is circular: hand-set likelihoods)"
+      },
+      "m9": {
+        "sensitivity_no_worse": true,
+        "lead_time_no_worse": true,
+        "false_alarms_no_worse": true,
+        "passes": true
+      },
+      "demo_story": "checked by tests/test_pipeline.py; orbit.toml is unchanged"
+    }
+  }
+}

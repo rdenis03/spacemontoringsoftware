@@ -32,10 +32,10 @@ def viral(**overrides) -> ScenarioLabel:
     return ScenarioLabel(**fields)
 
 
-def test_scenario_types_are_exactly_seven():
+def test_scenario_types_are_exactly_eight():
     assert {t.value for t in ScenarioType} == {
         "viral_reactivation", "respiratory_infection", "eva_exertion", "sleep_shift",
-        "solar_particle_event", "sensor_fault", "missing_data",
+        "solar_particle_event", "sensor_fault", "missing_data", "stress_load",
     }
     assert ALERTING_SCENARIOS == {
         ScenarioType.VIRAL_REACTIVATION, ScenarioType.RESPIRATORY_INFECTION,

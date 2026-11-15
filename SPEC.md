@@ -1283,6 +1283,34 @@ the switch rules below pass and the team agrees.
   story holds. The answer likelihoods are hand-set, so the evaluation
   measures consistency, not medical truth.
 
+**Results (B24; simulated, `reports/triage_eval.json`).** Seeds 101–105,
+180 days × 4 crew, symptom look-alikes on, 30 % mild illnesses, 459 chats;
+both reasoners read the chats with `lexicon`. Main reasoner comparison
+**without answers** (the answers come from the same hand-set likelihoods).
+
+| | `lexicon` + `rules` | `text_linear` + `bayes` |
+| --- | --- | --- |
+| Extractor macro F1 / negation / severity ±1 (provisional: 20-line stub) | 0.957 / 0.906 / 0.875 | 0.964 / 0.938 / 0.875 |
+| Red-flag recall | 1.00 | 1.00 |
+| Top-1 / top-3 / Brier, without answers | 0.994 / 1.000 / 0.191 | 0.976 / 0.991 / 0.040 |
+| Top-1 / top-3 / Brier, with answers | 0.972 / 1.000 / 0.150 | 0.976 / 0.991 / 0.042 |
+| Questions per chat | 3.6 | 1.5 |
+| M9 with chats: sensitivity, false alarms / 30 d | 0.975, 0.008 | 0.975, 0.008 |
+
+Decision: **no switch**; `orbit.toml` keeps `lexicon` and `rules`, so
+`TriageResult.model_version` stays `lexicon-0.1+rules-0.1`. `bayes` fails
+the rule on top-1 and top-3 without answers (better Brier, fewer questions);
+`text_linear` passes only on the stub, so it waits for about 200 human-written
+sentences. `bayes` checks `stop_probability` after the screening and
+missing-severity questions (`rules` before them), so a confident model still
+asks them. Lab results count only when present (a missing test is unknown).
+In training, a lab counts on a chat day when the preview's recent window
+(pipeline `recent_days`, 3) holds a reading, the same reading the scorer
+shows: "yes" if the preview flags it, "no" if not; no reading in the window is
+skipped. CRP is measured
+almost only on respiratory days in the simulator, so its table stays near 0.5
+for most patterns.
+
 **Done when (B23):** every checkpoint in `tasks/B23-triage-v1.md` passes,
 the contracts pass for both slots, and `python -m orbit triage AST-01 ...` prints
 the worked example (yellow 44.7).

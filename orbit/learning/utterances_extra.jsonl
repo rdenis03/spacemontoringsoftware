@@ -1,0 +1,74 @@
+{"text": "I feel like a zombie", "labels": {"symptom_fatigue": {"severity": null, "negated": false}}}
+{"text": "my energy is totally gone", "labels": {"symptom_fatigue": {"severity": 2, "negated": false}}}
+{"text": "can barely keep my eyes open", "labels": {"symptom_fatigue": {"severity": 2, "negated": false}}}
+{"text": "I could sleep for a week", "labels": {"symptom_fatigue": {"severity": 2, "negated": false}}}
+{"text": "dragging myself through the day", "labels": {"symptom_fatigue": {"severity": null, "negated": false}}}
+{"text": "running on empty", "labels": {"symptom_fatigue": {"severity": null, "negated": false}}}
+{"text": "totally spent after the shift", "labels": {"symptom_fatigue": {"severity": 2, "negated": false}}}
+{"text": "I'm beat", "labels": {"symptom_fatigue": {"severity": null, "negated": false}}}
+{"text": "a little sleepy this afternoon", "labels": {"symptom_fatigue": {"severity": 1, "negated": false}}}
+{"text": "I'm not tired at all", "labels": {"symptom_fatigue": {"severity": null, "negated": true}}}
+{"text": "feel hot and shaky", "labels": {"symptom_fever_chills": {"severity": null, "negated": false}}}
+{"text": "I think I'm running a temperature", "labels": {"symptom_fever_chills": {"severity": null, "negated": false}}}
+{"text": "teeth chattering under the blanket", "labels": {"symptom_fever_chills": {"severity": 2, "negated": false}}}
+{"text": "woke up drenched in sweat", "labels": {"symptom_fever_chills": {"severity": null, "negated": false}}}
+{"text": "a bit feverish tonight", "labels": {"symptom_fever_chills": {"severity": 1, "negated": false}}}
+{"text": "I don't feel feverish", "labels": {"symptom_fever_chills": {"severity": null, "negated": true}}}
+{"text": "hurts when I swallow", "labels": {"symptom_sore_throat": {"severity": null, "negated": false}}}
+{"text": "my throat feels like sandpaper", "labels": {"symptom_sore_throat": {"severity": 2, "negated": false}}}
+{"text": "throat is really scratchy", "labels": {"symptom_sore_throat": {"severity": 2, "negated": false}}}
+{"text": "a tickle in my throat", "labels": {"symptom_sore_throat": {"severity": 1, "negated": false}}}
+{"text": "throat is fine", "labels": {}}
+{"text": "glands under my jaw feel big", "labels": {"symptom_swollen_glands": {"severity": null, "negated": false}}}
+{"text": "my neck feels lumpy and tender", "labels": {"symptom_swollen_glands": {"severity": null, "negated": false}}}
+{"text": "tender lumps under my jaw", "labels": {"symptom_swollen_glands": {"severity": null, "negated": false}}}
+{"text": "there's a painful bump on my gum", "labels": {"symptom_mouth_sores": {"severity": null, "negated": false}}}
+{"text": "a blister on the corner of my lip", "labels": {"symptom_mouth_sores": {"severity": null, "negated": false}}}
+{"text": "my lip is cracked and has a sore spot", "labels": {"symptom_mouth_sores": {"severity": null, "negated": false}}}
+{"text": "little white spots inside my cheek", "labels": {"symptom_mouth_sores": {"severity": null, "negated": false}}}
+{"text": "my skin feels like it's on fire in one strip", "labels": {"symptom_rash_tingling": {"severity": 2, "negated": false}}}
+{"text": "there's a band of red bumps around my side", "labels": {"symptom_rash_tingling": {"severity": null, "negated": false}}}
+{"text": "prickly feeling on my back", "labels": {"symptom_rash_tingling": {"severity": null, "negated": false}}}
+{"text": "my skin is super sensitive on one side", "labels": {"symptom_rash_tingling": {"severity": 2, "negated": false}}}
+{"text": "a weird zinging feeling along my ribs", "labels": {"symptom_rash_tingling": {"severity": null, "negated": false}}}
+{"text": "spots on my chest that itch", "labels": {"symptom_rash_tingling": {"severity": null, "negated": false}}}
+{"text": "there's a strip that feels sunburned", "labels": {"symptom_rash_tingling": {"severity": null, "negated": false}}}
+{"text": "my skin feels electric in one patch", "labels": {"symptom_rash_tingling": {"severity": null, "negated": false}}}
+{"text": "no spots or bumps on my skin", "labels": {"symptom_rash_tingling": {"severity": null, "negated": true}}}
+{"text": "my temples are throbbing", "labels": {"symptom_headache": {"severity": 2, "negated": false}}}
+{"text": "pressure behind my eyes", "labels": {"symptom_headache": {"severity": null, "negated": false}}}
+{"text": "my skull feels too tight", "labels": {"symptom_headache": {"severity": null, "negated": false}}}
+{"text": "a dull ache in my head", "labels": {"symptom_headache": {"severity": 1, "negated": false}}}
+{"text": "splitting pain in my head", "labels": {"symptom_headache": {"severity": 3, "negated": false}}}
+{"text": "head feels heavy", "labels": {"symptom_headache": {"severity": 1, "negated": false}}}
+{"text": "my head is killing me", "labels": {"symptom_headache": {"severity": 3, "negated": false}}}
+{"text": "my head is fine", "labels": {}}
+{"text": "my legs feel like lead", "labels": {"symptom_muscle_aches": {"severity": null, "negated": false}}}
+{"text": "everything is stiff after the run", "labels": {"symptom_muscle_aches": {"severity": 1, "negated": false}}}
+{"text": "my shoulders are wrecked", "labels": {"symptom_muscle_aches": {"severity": 2, "negated": false}}}
+{"text": "my thighs are on fire after the treadmill", "labels": {"symptom_muscle_aches": {"severity": 2, "negated": false}}}
+{"text": "my whole body is aching", "labels": {"symptom_muscle_aches": {"severity": 2, "negated": false}}}
+{"text": "my arms are sore from the spacewalk", "labels": {"symptom_muscle_aches": {"severity": null, "negated": false}}}
+{"text": "my calves are killing me", "labels": {"symptom_muscle_aches": {"severity": 3, "negated": false}}}
+{"text": "no pain in my muscles", "labels": {"symptom_muscle_aches": {"severity": null, "negated": true}}}
+{"text": "feeling great today", "labels": {}}
+{"text": "slept well and ready to work", "labels": {}}
+{"text": "nothing to report", "labels": {}}
+{"text": "all systems normal on my end", "labels": {}}
+{"text": "busy day with the robotic arm", "labels": {}}
+{"text": "mood is good", "labels": {}}
+{"text": "a bit homesick", "labels": {}}
+{"text": "the coffee tastes weird", "labels": {}}
+{"text": "my feet are cold", "labels": {}}
+{"text": "I bumped my elbow on the hatch", "labels": {}}
+{"text": "the cabin is noisy", "labels": {}}
+{"text": "I feel fine", "labels": {}}
+{"text": "ate a big lunch", "labels": {}}
+{"text": "looking forward to the call home", "labels": {}}
+{"text": "my eyes are a bit dry", "labels": {}}
+{"text": "stuffy cabin air today", "labels": {}}
+{"text": "my nose is running", "labels": {}}
+{"text": "feeling a little seasick", "labels": {}}
+{"text": "pretty good overall", "labels": {}}
+{"text": "very calm today", "labels": {}}
+{"text": "quite hungry", "labels": {}}

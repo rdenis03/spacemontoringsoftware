@@ -64,6 +64,6 @@ def test_modules_lists_the_triage_slots(capsys):
     assert main(["--config", str(CONFIG), "modules"]) == 0
     by_slot = {line.split()[0]: line for line in capsys.readouterr().out.splitlines()}
     # other tests register throwaway modules in the shared registry, so check only what M15 adds
-    assert by_slot["extractor"].startswith("extractor  lexicon (active)")
-    assert by_slot["reasoner"].startswith("reasoner   rules (active)")
+    assert by_slot["extractor"].startswith("extractor  ") and "lexicon (active)" in by_slot["extractor"]
+    assert by_slot["reasoner"].startswith("reasoner   ") and "rules (active)" in by_slot["reasoner"]
     assert by_slot["scorer"].startswith("scorer     "), "one column wide enough for every slot name"
