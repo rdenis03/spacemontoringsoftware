@@ -49,6 +49,27 @@ max_cards = 3
 [modules.sync]              # M13
 use = "consent_gate"
 
+# ---- Symptom triage (M15) ---------------------------------------------------
+# The chat check-in: the astronaut's own words -> red-flag rules -> extractor
+# -> reasoner -> up to 5 questions -> cards. Not part of the daily pipeline;
+# `python -m orbit triage` and the API's /triage endpoints use it.
+
+[triage]                      # M15
+session_timeout_minutes = 120 # an open chat expires this long after its last turn
+patterns_path = "cards/patterns.jsonl"
+triage_cards_path = "cards/triage_cards.jsonl"   # never mixed into action_cards.jsonl
+red_flags_path = "cards/red_flags.jsonl"
+
+[triage.extractor]
+use = "lexicon"
+lexicon_path = "cards/symptom_lexicon.jsonl"
+
+[triage.reasoner]
+use = "rules"
+questions_path = "cards/questions.jsonl"
+max_questions = 5
+stop_probability = 0.8
+
 # ---- Data sources -----------------------------------------------------------
 # Read in order by `python -m orbit ingest`. Add the M2 simulator and the
 # M5 space-weather feed here as they are built.

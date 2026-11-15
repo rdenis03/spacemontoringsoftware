@@ -1,0 +1,8 @@
+{"pattern":"vzv_like","label":"Signs that fit shingles (VZV)","card_ids":["saliva-test","watch-patch"]}
+{"pattern":"hsv1_like","label":"Signs that fit cold sores (HSV-1)","card_ids":["mouth-care-early"]}
+{"pattern":"ebv_like","label":"Signs that fit glandular fever (EBV)","card_ids":["rest-fluids"]}
+{"pattern":"respiratory","label":"Signs that fit a chest or throat infection","card_ids":["keep-distance"]}
+{"pattern":"exertion","label":"Signs that fit hard physical work","card_ids":["recover-after-work"]}
+{"pattern":"sleep_loss","label":"Signs that fit short or broken sleep","card_ids":["recover-sleep"]}
+{"pattern":"stress","label":"Signs that fit stress","card_ids":["ease-stress"]}
+{"pattern":"other","label":"Something else: describe it to the medical officer","card_ids":["describe-to-cmo"]}

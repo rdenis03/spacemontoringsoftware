@@ -1,6 +1,6 @@
 # Backend tasks
 
-The ORBIT backend, cut into 19 small jobs. Each file in this folder is one job
+The ORBIT backend, cut into 21 jobs. Each file in this folder is one job
 for one AI agent (or one person): one branch, one pull request, one test file.
 B12 (NASA space weather feed), B21 (EWMA baseline) and B22 (CUSUM detector)
 were dropped from the plan; their numbers are not reused.
@@ -87,8 +87,11 @@ every API task edits `orbit/api/app.py`.
 | [x] | [B18](B18-auto-send.md) | Auto-send on orange or red | API | B17 | S |
 | [x] | [B19](B19-action-cards.md) | Action cards v2 | Crew guidance | none | S |
 | [x] | [B20](B20-live-demo-tool.md) | Live body demo tool | Demo | none | S |
+| [x] | [B23](B23-triage-v1.md) | Symptom triage v1: rules, end to end | Triage (M15) | B15, B18, B19 | L |
+| [ ] | [B24](B24-triage-ml.md) | Symptom triage v2: the models | Triage (M15) | B23 | L |
 
 S = one short agent session. M = a longer one, or two.
+L = one long agent session, in checkpoints.
 "Order only" means the task does not use the earlier one; it waits so the two
 do not edit `orbit/api/app.py` at the same time.
 
@@ -109,7 +112,7 @@ Every task comes after the tasks it needs, and the endpoints the frontend
 waits for come early:
 
 B01 → B13 → B02 → B07 → B03 → B14 → B04 → B05 → B15 → B20 → B06 → B08 →
-B16 → B09 → B17 → B10 → B18 → B19 → B11
+B16 → B09 → B17 → B10 → B18 → B19 → B11 → B23 → B24
 
 **Critical path:** B01 → B02 → B03 → B04 → B09 → B10. The simulator is the
 long pole. If it runs late, B09 can first train on B03's output (illness only,
@@ -122,13 +125,17 @@ These are the exceptions:
 
 | File | Touched by | Rule |
 |---|---|---|
-| `orbit/modules/__init__.py` | B02, B08, B11 | One import line per task. Merge conflicts here are one line: keep both. |
-| `orbit.toml` | B10 (scorer), B11 (a commented-out source example), B16 and B18 (`[comms]`), B19 (`cards_path`) | Change only your block. Starters stay active until B10. |
+| `orbit/modules/__init__.py` | B02, B08, B11, B23, B24 | One import line per module (B23 and B24 add two each). Merge conflicts here are one line: keep both. |
+| `orbit.toml` | B10 (scorer), B11 (a commented-out source example), B16 and B18 (`[comms]`), B19 (`cards_path`), B23 (`[triage]`), B24 (`[triage.*]` `use` lines, only after its switch rules) | Change only your block. Starters stay active until B10. |
 | `pyproject.toml` | B08 (package data), B09 (`[train]` extra) | In a separate commit. |
-| `orbit/schema/__init__.py` | B01 | Add exports only. |
-| `orbit/core/store.py`, `orbit/core/config.py` | B16, B18 | Only the `outbox` table and the `[comms]` section. |
-| `orbit/api/app.py`, `orbit/__main__.py` | B13 to B18 (`__main__.py`: B16 only) | One task at a time, in order. |
-| `README.md` | B06 writes *Results*, B10 updates it | Only the *Results* section. |
+| `orbit/schema/__init__.py` | B01, B23 | Add exports only. |
+| `orbit/schema/models.py` | B23 | `SCHEMA_VERSION` only (1.0.0 → 1.1.0). |
+| `orbit/schema/labels.py`, `orbit/modules/simulator.py` | B01 to B04, B24 | B24: `STRESS_LOAD` and the off-by-default symptom look-alikes only. |
+| `orbit/core/interfaces.py` | B23 | `TriageEvidence` and the `extractor` and `reasoner` slots only. |
+| `orbit/core/store.py`, `orbit/core/config.py` | B16, B18, B23 | Only the `outbox` table and the `[comms]` section; B23 adds the `triage_sessions` table (`config.py` unchanged). |
+| `orbit/api/app.py`, `orbit/__main__.py` | B13 to B18 (`__main__.py`: B16 only), B23 | One task at a time, in order. |
+| `README.md` | B06 writes *Results*, B10 updates it, B24 adds triage numbers | Only the *Results* section. |
+| `SPEC.md` | B23 writes M15, B24 adds its results | Only the M15 section (plus B23's Part 4 row and line under "Slots"). |
 | `tests/test_pipeline.py` | B10 only, on purpose | Pins the demo story: AST-01 yellow on day 89, orange on day 90. |
 
 ## Steps an agent cannot do

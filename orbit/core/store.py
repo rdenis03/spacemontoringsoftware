@@ -35,6 +35,7 @@ from orbit.schema import (
     Quality,
     RiskAssessment,
     SignalType,
+    TriageSession,
 )
 
 from .interfaces import DayResult, EarthPacket
@@ -71,6 +72,10 @@ CREATE TABLE IF NOT EXISTS outbox (
     id TEXT PRIMARY KEY, astronaut_id TEXT NOT NULL, created_ts INTEGER NOT NULL,
     deliver_ts INTEGER NOT NULL, doc TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS outbox_by_time ON outbox (astronaut_id, created_ts);
+CREATE TABLE IF NOT EXISTS triage_sessions (
+    id TEXT PRIMARY KEY, astronaut_id TEXT NOT NULL, started_ts INTEGER NOT NULL,
+    status TEXT NOT NULL, doc TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS triage_by_time ON triage_sessions (astronaut_id, started_ts);
 """
 
 
@@ -369,8 +374,38 @@ class Store:
             (astronaut_id,),
         )
 
+    # ---- triage sessions (M15) ---------------------------------------------
+
+    def save_session(self, session: TriageSession) -> None:
+        """Save a triage chat. Saving the same ``session_id`` again replaces it."""
+        with self._tx() as db:
+            db.execute(
+                "INSERT OR REPLACE INTO triage_sessions VALUES (?, ?, ?, ?, ?)",
+                (session.session_id, session.astronaut_id, _ts(session.started_at),
+                 session.status.value, session.model_dump_json()),
+            )
+
+    def session(self, session_id: str) -> TriageSession | None:
+        found = self._docs(TriageSession, "SELECT doc FROM triage_sessions WHERE id=?", (session_id,))
+        return found[0] if found else None
+
+    def sessions(
+        self, astronaut_id: str, *, start: datetime | None = None, end: datetime | None = None
+    ) -> list[TriageSession]:
+        """One astronaut's triage chats started in [start, end], newest first."""
+        sql = ["SELECT doc FROM triage_sessions WHERE astronaut_id = ?"]
+        params: list = [astronaut_id]
+        if start is not None:
+            sql.append("AND started_ts >= ?")
+            params.append(_ts(start))
+        if end is not None:
+            sql.append("AND started_ts <= ?")
+            params.append(_ts(end))
+        sql.append("ORDER BY started_ts DESC, id")
+        return self._docs(TriageSession, " ".join(sql), params)
+
     def counts(self) -> dict[str, int]:
         tables = ("crew", "observations", "events", "baselines", "anomalies",
-                  "assessments", "recommendations", "outbox")
+                  "assessments", "recommendations", "outbox", "triage_sessions")
         with self._lock:
             return {t: self._conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in tables}

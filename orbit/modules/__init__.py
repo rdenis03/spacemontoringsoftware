@@ -21,3 +21,5 @@ from . import actions, baseline, consent, detector, scorer, sources  # noqa: F40
 from . import simulator  # noqa: F401
 from . import scorer_learned  # noqa: F401
 from . import ingestion  # noqa: F401
+from . import extractor  # noqa: F401
+from . import reasoner  # noqa: F401

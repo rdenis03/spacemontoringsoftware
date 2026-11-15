@@ -12,8 +12,13 @@ it has the method below, it plugs in.
     scorer      M8                   score(ctx, anomalies) -> RiskAssessment
     actions     M10                  recommend(assessment, ctx) -> list[ActionCard]
     sync        M13                  package(member, observations, assessments) -> EarthPacket
+    extractor   M15                  extract(report, ctx) -> list[SymptomFinding]
+    reasoner    M15                  rank(evidence, ctx) -> list[PatternScore]
+                                     next_question(evidence, ranking, ctx) -> TriageQuestion | None
 
 Data flows one way: sources -> store -> baseline -> detector -> scorer -> actions.
+The two M15 slots are used only by the triage service (``orbit/triage/``),
+never by the daily pipeline; they are configured under ``[triage]``.
 Each analytics stage gets an ``AssessmentContext``: a read-only snapshot of
 everything known about one astronaut at one moment. Modules never query the
 database themselves, which keeps them pure, fast and easy to test.
@@ -35,10 +40,15 @@ from orbit.schema import (
     ContextEvent,
     CrewMember,
     Observation,
+    PatternScore,
     RiskAssessment,
     RowError,
     SignalCategory,
     SignalType,
+    SymptomFinding,
+    SymptomReport,
+    TriageAnswer,
+    TriageQuestion,
 )
 
 # --------------------------------------------------------------------------
@@ -141,6 +151,23 @@ class EarthPacket(BaseModel):
     )
 
 
+@dataclass(frozen=True)
+class TriageEvidence:
+    """What a triage reasoner (M15) knows at one turn of a chat.
+
+    ``findings`` already include what the answers said about symptoms (the
+    triage service merges each symptom answer in), so a reasoner reads
+    symptoms from ``findings`` and uses ``answers`` for the other questions.
+    ``preview`` and ``anomalies`` come from ``pipeline.assess(as_of, save=False)``.
+    """
+
+    findings: tuple[SymptomFinding, ...] = ()
+    answers: tuple[TriageAnswer, ...] = ()
+    asked: tuple[str, ...] = ()  # question ids already asked (answered or skipped)
+    preview: RiskAssessment | None = None  # assess(save=False) at the session's as_of
+    anomalies: tuple[Anomaly, ...] = ()
+
+
 # --------------------------------------------------------------------------
 # Slots
 # --------------------------------------------------------------------------
@@ -195,6 +222,28 @@ class SyncGate(Protocol):
     ) -> EarthPacket: ...
 
 
+@runtime_checkable
+class SymptomExtractor(Protocol):
+    """M15: turn the astronaut's own words into symptom findings. Pure."""
+
+    def extract(self, report: SymptomReport, ctx: AssessmentContext) -> list[SymptomFinding]: ...
+
+
+@runtime_checkable
+class TriageReasoner(Protocol):
+    """M15: rank the patterns and choose the next follow-up question. Pure.
+
+    ``rank`` returns every ``TriagePattern`` once, probabilities summing to 1,
+    most likely first. ``next_question`` returns None when no more should be asked.
+    """
+
+    def rank(self, evidence: TriageEvidence, ctx: AssessmentContext) -> list[PatternScore]: ...
+
+    def next_question(
+        self, evidence: TriageEvidence, ranking: Sequence[PatternScore], ctx: AssessmentContext
+    ) -> TriageQuestion | None: ...
+
+
 SLOTS: dict[str, type] = {
     "source": DataSource,
     "baseline": BaselineEngine,
@@ -202,11 +251,13 @@ SLOTS: dict[str, type] = {
     "scorer": RiskScorer,
     "actions": ActionEngine,
     "sync": SyncGate,
+    "extractor": SymptomExtractor,
+    "reasoner": TriageReasoner,
 }
 """Slot name -> interface. The registry and config use these names."""
 
 __all__ = [
-    "SLOTS", "SourceBatch", "AssessmentContext", "DayResult", "EarthPacket",
+    "SLOTS", "SourceBatch", "AssessmentContext", "DayResult", "EarthPacket", "TriageEvidence",
     "DataSource", "BaselineEngine", "AnomalyDetector", "RiskScorer", "ActionEngine",
-    "SyncGate",
+    "SyncGate", "SymptomExtractor", "TriageReasoner",
 ]

@@ -25,20 +25,30 @@ dashboard and the command line always show exactly the same results.
     POST /api/observations                   push readings from a device or feed (M3)
     POST /api/pipeline/run                   re-run the assessments
 
+    Symptom triage, the chat check-in (M15; the astronaut's own view only):
+    POST /api/crew/{id}/triage                         {text, timestamp?} -> TriageResult
+    POST /api/crew/{id}/triage/{session_id}/answer     {question_id, value}, {text} or {done} -> TriageResult
+    POST /api/crew/{id}/triage/{session_id}/confirm    {corrections?} -> {result, day}; saves a check-in
+    POST /api/crew/{id}/triage/{session_id}/cancel     -> TriageSession; saves nothing
+    GET  /api/crew/{id}/triage/{session_id}            -> TriageSession
+    GET  /api/crew/{id}/triage?start=&end=             -> TriageSession[], newest first
+
 Interactive docs: http://localhost:8000/docs once the server runs.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from collections.abc import Callable
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictInt
 
 from orbit.core.interfaces import DayResult, EarthPacket
 from orbit.core.pipeline import Pipeline
@@ -54,10 +64,19 @@ from orbit.schema import (
     RiskAssessment,
     SignalCategory,
     SignalType,
+    TriageResult,
+    TriageSession,
     get_spec,
     parse_records,
 )
 from orbit.schema.export import registry_document
+from orbit.triage.service import (
+    BadAnswer,
+    SessionClosed,
+    SessionNotFound,
+    TriageService,
+    UnknownAstronaut,
+)
 
 from .earth_report import build_report
 
@@ -103,6 +122,57 @@ class OverviewRow(BaseModel):
     level: str | None
     score: float | None
     assessed_at: datetime | None
+    red_flag_at: datetime | None = Field(
+        default=None, description="Mission time of the latest triage red flag in the last 24 h "
+                                  "(real time); no details (M15).")
+
+
+class TriageStart(BaseModel):
+    """The first message of a triage chat, in the astronaut's own words (M15)."""
+
+    text: str = Field(min_length=1, max_length=1000,
+                      examples=["Weird burning, tingly patch on my ribs since last night. Pretty wiped out too."])
+    timestamp: datetime | None = Field(
+        default=None, description="The moment assessed (mission time in the demo). Default: now.")
+
+
+class TriageReply(BaseModel):
+    """Answer the open question (value null skips it), add text, and/or say that's all."""
+
+    question_id: str | None = Field(default=None, examples=["rash-tingling"])
+    value: bool | int | float | str | None = Field(default=None, examples=["moderate"])
+    text: str | None = Field(default=None, max_length=1000)
+    done: bool = False
+
+
+Severity = Annotated[StrictInt, Field(ge=0, le=3)]
+"""A whole number 0-3. Booleans, strings and floats are refused (422)."""
+
+
+class TriageConfirm(BaseModel):
+    """Optional corrections before saving: symptom signal -> severity 0-3."""
+
+    corrections: dict[SignalType, Severity] | None = Field(
+        default=None, examples=[{"symptom_rash_tingling": 2}])
+
+
+NO_SHARED_TRIAGE = "Triage sessions have no shared view"
+
+
+def no_shared_view(view: str | None = Query(default=None, include_in_schema=False)) -> None:
+    """Triage holds the astronaut's own words: it has no shared view, and asking for one is an error."""
+    if view is not None:
+        raise HTTPException(400, NO_SHARED_TRIAGE)
+
+
+class TriageConfirmed(BaseModel):
+    """The confirmed chat and the new assessment, with the chat's cards.
+
+    ``day`` is null when a red flag in an invalid confirm escalated the chat instead.
+    """
+
+    result: TriageResult
+    day: DayResult | None = None
 
 
 class ConsentUpdate(BaseModel):
@@ -149,6 +219,7 @@ def create_app(
     comms_delay_minutes: float = 20.0,
     clock: Callable[[], datetime] | None = None,
     auto_send_level: str = "off",
+    triage: TriageService | None = None,
 ) -> FastAPI:
     """Build the API. ``clock`` (UTC) drives the comms queue; tests pass a fixed one.
 
@@ -158,9 +229,14 @@ def create_app(
     assessment reaches this level, ORBIT queues a packet for Earth by itself,
     at most one per astronaut per assessment day. The default here is "off";
     ``serve`` passes ``[comms] auto_send_level`` from orbit.toml (default "orange").
+
+    ``triage`` (M15): the chat check-in service. Without one, a service with
+    the built-in starters and the same ``clock`` is used; ``serve`` passes one
+    built from ``[triage]`` in orbit.toml.
     """
     auto_level = None if auto_send_level == "off" else AlertLevel(auto_send_level)
     now = clock or (lambda: datetime.now(timezone.utc))
+    triage = triage if triage is not None else TriageService(pipeline, clock=now)
     app = FastAPI(
         title="ORBIT API",
         version=SCHEMA_VERSION,
@@ -170,6 +246,7 @@ def create_app(
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
                        allow_headers=["*"])
     app.state.pipeline = pipeline
+    app.state.triage = triage
     store = pipeline.store
 
     def member_or_404(astronaut_id: str) -> CrewMember:
@@ -219,7 +296,8 @@ def create_app(
         return {"status": "ok", "mission": mission_name, "schema_version": SCHEMA_VERSION,
                 "modules": pipeline.module_names, "counts": store.counts(),
                 "comms": {"one_way_delay_minutes": comms_delay_minutes,
-                          "auto_send_level": auto_send_level}}
+                          "auto_send_level": auto_send_level},
+                "triage": {"modules": triage.module_names, "model_version": triage.model_version}}
 
     @app.get("/api/signals")
     def signals() -> dict[str, Any]:
@@ -252,6 +330,7 @@ def create_app(
                 level=latest.level.value if latest else None,
                 score=latest.score if latest else None,
                 assessed_at=latest.assessed_at if latest else None,
+                red_flag_at=triage.red_flag_at(member.astronaut_id),
             ))
         return rows
 
@@ -477,7 +556,105 @@ def create_app(
         return RunResponse(summary=report.summary(), assessed=report.assessed,
                            by_level=dict(report.by_level))
 
+    # ---- symptom triage (M15): the astronaut's own view only ------------------------
+
+    def triage_call(astronaut_id: str, session_id: str | None, call: Callable[[], Any]) -> Any:
+        """Run a service call with the HTTP errors the frontend expects: 404, 409, 422."""
+        member_or_404(astronaut_id)
+        try:
+            if session_id is not None and triage.session(session_id).astronaut_id != astronaut_id:
+                raise SessionNotFound(f"unknown triage session '{session_id}' for '{astronaut_id}'")
+            return call()
+        except (SessionNotFound, UnknownAstronaut) as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except SessionClosed as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except BadAnswer as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    # The triage POST endpoints read the raw body and hand it to the service, which runs
+    # the red-flag gate before any validation: FastAPI must not reject a request (422)
+    # before the gate has seen it. The models only document the bodies in /docs.
+
+    async def write(request: Request, astronaut_id: str, view: str | None,
+                    call: Callable[[Any], Any]) -> Any:
+        raw = await _raw_body(request)
+
+        def run() -> Any:
+            member_or_404(astronaut_id)
+            if view is not None and not triage.screen(raw):  # a flagged body is never refused
+                raise HTTPException(400, NO_SHARED_TRIAGE)
+            return triage_call(astronaut_id, None, lambda: call(raw))
+
+        return await run_in_threadpool(run)
+
+    hidden_view = Query(default=None, include_in_schema=False)
+
+    @app.post("/api/crew/{astronaut_id}/triage", response_model=TriageResult,
+              openapi_extra=_body_doc(TriageStart))
+    async def triage_start(astronaut_id: str, request: Request, view: str | None = hidden_view):
+        """Start a chat check-in. Nothing is saved as a check-in until confirm."""
+        return await write(request, astronaut_id, view, lambda raw: triage.start_raw(astronaut_id, raw))
+
+    @app.post("/api/crew/{astronaut_id}/triage/{session_id}/answer", response_model=TriageResult,
+              openapi_extra=_body_doc(TriageReply))
+    async def triage_answer(astronaut_id: str, session_id: str, request: Request,
+                            view: str | None = hidden_view):
+        return await write(request, astronaut_id, view,
+                           lambda raw: triage.answer_raw(astronaut_id, session_id, raw))
+
+    @app.post("/api/crew/{astronaut_id}/triage/{session_id}/confirm", response_model=TriageConfirmed,
+              openapi_extra=_body_doc(TriageConfirm, required=False))
+    async def triage_confirm(astronaut_id: str, session_id: str, request: Request,
+                             view: str | None = hidden_view):
+        """Save the findings as a check-in, re-assess, and keep the chat's cards with that run.
+
+        If the body carries a red flag but is invalid, the chat is escalated, not
+        confirmed: ``result`` is the escalated result and ``day`` is null.
+        """
+        def confirm(raw: Any) -> TriageConfirmed:
+            result, day = triage.confirm_raw(astronaut_id, session_id, raw)
+            return TriageConfirmed(result=result, day=day)
+
+        return await write(request, astronaut_id, view, confirm)
+
+    @app.post("/api/crew/{astronaut_id}/triage/{session_id}/cancel", response_model=TriageSession)
+    async def triage_cancel(astronaut_id: str, session_id: str, request: Request,
+                            view: str | None = hidden_view):
+        return await write(request, astronaut_id, view,
+                           lambda raw: triage.cancel_raw(astronaut_id, session_id, raw))
+
+    @app.get("/api/crew/{astronaut_id}/triage/{session_id}", dependencies=[Depends(no_shared_view)])
+    def triage_session(astronaut_id: str, session_id: str) -> TriageSession:
+        return triage_call(astronaut_id, session_id, lambda: triage.session(session_id))
+
+    @app.get("/api/crew/{astronaut_id}/triage", dependencies=[Depends(no_shared_view)])
+    def triage_sessions(
+        astronaut_id: str, start: datetime | None = None, end: datetime | None = None
+    ) -> list[TriageSession]:
+        """This astronaut's chats started (real time) in [start, end], newest first. No shared view."""
+        return triage_call(astronaut_id, None,
+                           lambda: triage.sessions(astronaut_id, start=_utc(start), end=_utc(end)))
+
     return app
+
+
+async def _raw_body(request: Request) -> Any:
+    """The request body as parsed JSON, or its text if it is not JSON; None if empty."""
+    body = await request.body()
+    if not body.strip():
+        return None
+    text = body.decode("utf-8", errors="replace")
+    try:
+        return json.loads(text)
+    except ValueError:
+        return text
+
+
+def _body_doc(model: type[BaseModel], required: bool = True) -> dict[str, Any]:
+    """Document a raw-body endpoint's JSON body in /docs (it is validated by the service)."""
+    return {"requestBody": {"required": required, "content": {
+        "application/json": {"schema": model.model_json_schema()}}}}
 
 
 def _utc(value: datetime | None) -> datetime | None:
@@ -490,8 +667,11 @@ def _utc(value: datetime | None) -> datetime | None:
 def create_app_from_settings(config_path: str | None = None) -> FastAPI:
     """Factory for uvicorn: ``uvicorn orbit.api.app:create_app_from_settings --factory``."""
     from orbit.core.config import load_settings
+    from orbit.triage.config import load_triage_settings
 
     settings = load_settings(config_path)
-    return create_app(Pipeline.from_settings(settings), mission_name=settings.mission_name,
+    pipeline = Pipeline.from_settings(settings)
+    return create_app(pipeline, mission_name=settings.mission_name,
                       comms_delay_minutes=settings.comms_delay_minutes,
-                      auto_send_level=settings.comms_auto_send_level)
+                      auto_send_level=settings.comms_auto_send_level,
+                      triage=TriageService.from_settings(load_triage_settings(settings), pipeline))
