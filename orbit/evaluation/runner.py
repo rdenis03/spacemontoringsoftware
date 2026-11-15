@@ -7,7 +7,7 @@ in-memory store, ingest, run, and score the assessments against the
 simulator's labels with ``evaluate`` (B05). Nothing is reused between runs,
 and every config sees identical data for a given seed.
 
-Lead time is reported two ways (decision recorded under B05 in tasks/NOTES.md):
+Lead time is reported two ways:
 
 * ``lead_time_days``: whole calendar days, the headline in the printed table:
   ``(symptom_onset.date() - first_alert.assessed_at.date()).days`` in UTC, so

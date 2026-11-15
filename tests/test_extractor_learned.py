@@ -207,7 +207,7 @@ def test_extra_paraphrases_load_and_stay_out_of_the_test_set():
 def test_human_sentences_stub_is_marked():
     lines = [json.loads(line) for line in HUMAN.read_text(encoding="utf-8").splitlines() if line]
     assert len(lines) == 20  # a stub: about 200 must come from people who never saw the templates
-    assert all(line["source"] == "stub-claude" for line in lines)
+    assert all(line["source"] == "stub" for line in lines)
     for line in lines:
         for name, gold in line["findings"].items():
             assert S(name).value.startswith("symptom_")

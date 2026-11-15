@@ -1,7 +1,7 @@
 # ORBIT architecture and module specs
 
-This file is the build spec for ORBIT. It is written so a Claude Code agent
-(or a person) can build any one module without reading the rest of the code
+This file is the build spec for ORBIT. It is written so anyone on the team
+can build any one module without reading the rest of the code
 first.
 
 **How to use it**
@@ -63,7 +63,7 @@ connected. It calls them in order and saves results to the **store**
 | Degrade, don't die | A module error must never stop the system. The pipeline isolates stages; you must not catch-and-hide errors inside your module either: raise clearly. |
 | Always runnable | `python -m orbit demo` must work after every change. Starter modules stay registered as fallbacks. |
 
-## Rules for every agent (MUST)
+## Rules for every module (MUST)
 
 1. **Use the schema models** from `orbit.schema` for all data crossing a
    module boundary. Never pass raw dicts between modules.
@@ -825,7 +825,7 @@ categories show the neutral label. Show who each card escalates to.
 `library.py`, `red_flags.py`, `service.py`, `config.py`), `orbit/modules/extractor.py`,
 `orbit/modules/reasoner.py`, `cards/symptom_lexicon.jsonl`, `cards/questions.jsonl`,
 `cards/patterns.jsonl`, `cards/triage_cards.jsonl`, `cards/red_flags.jsonl`, and the
-tests listed in `tasks/B23-triage-v1.md`. Allowed core changes: `orbit/core/interfaces.py`
+triage tests in `tests/`. Allowed core changes: `orbit/core/interfaces.py`
 (`TriageEvidence`, two protocols, `SLOTS`), `orbit/core/store.py` (`triage_sessions`
 only), `orbit/schema/models.py` (`SCHEMA_VERSION` only), exports in
 `orbit/schema/__init__.py` and `orbit/core/__init__.py`, `orbit/api/app.py`,
@@ -845,7 +845,7 @@ daily pipeline (`orbit/core/pipeline.py`) does not change.
 
 **Read first:** this section, `orbit/core/interfaces.py`, `Pipeline.assess` in
 `orbit/core/pipeline.py`, `orbit/modules/actions.py`, `orbit/modules/scorer.py`,
-`cards/action_cards.jsonl`, and tasks/NOTES.md B08, B15, B18 and B19.
+and `cards/action_cards.jsonl`.
 
 ```
  text ──▶ red-flag rules ──▶ extractor ──▶ findings ─┐
@@ -1313,7 +1313,7 @@ skipped. CRP is measured
 almost only on respiratory days in the simulator, so its table stays near 0.5
 for most patterns.
 
-**Done when (B23):** every checkpoint in `tasks/B23-triage-v1.md` passes,
+**Done when (B23):** `python -m pytest` passes,
 the contracts pass for both slots, and `python -m orbit triage AST-01 ...` prints
 the worked example (yellow 44.7).
 

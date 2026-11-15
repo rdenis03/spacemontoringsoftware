@@ -45,7 +45,7 @@ baseline (the starters), the others are compared with it. Four parts:
    days) and false alarms per 30 astronaut-days, as M9 (``evaluate``), with and
    without the chats.
 
-``switch`` checks the rules in ``tasks/B24-triage-ml.md`` for each compared
+``switch`` checks the switch rules in SPEC.md (M15, version 2) for each compared
 config and gives a recommendation. ``text_linear`` is never recommended while
 the human sentences are the stub. All numbers come from simulated missions and
 hand-set likelihoods: illustrative, not clinical.
@@ -84,7 +84,7 @@ HUMAN_SENTENCES = ROOT / "tests" / "fixtures" / "triage" / "human_sentences.json
 RED_FLAG_SENTENCES = ROOT / "tests" / "fixtures" / "triage" / "red_flag_sentences.jsonl"
 LEXICON = ROOT / "cards" / "symptom_lexicon.jsonl"
 SYMPTOMS = tuple(s for s in SignalType if get_spec(s).category is SignalCategory.SYMPTOM)
-HUMAN_STUB_SOURCE = "stub-claude"
+HUMAN_STUB_SOURCE = "stub"
 NOTE = ("Simulated missions and hand-set answer likelihoods: the reasoner numbers measure "
         "consistency with the question bank, not medical truth. Extractor numbers are "
         "provisional (20-line stub, same author as the templates). Illustrative, not clinical.")
